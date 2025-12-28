@@ -80,7 +80,7 @@ impl NixosToolkitApp {
     fn show_about(&self) {
         let window = self.active_window();
 
-        let about = adw::AboutDialog::builder()
+        let about = adw::AboutWindow::builder()
             .application_name("NixOS Toolkit")
             .application_icon("preferences-system")
             .developer_name("NixOS Toolkit Contributors")
@@ -89,6 +89,7 @@ impl NixosToolkitApp {
             .issue_url("https://github.com/devjonesafrica/NixOSApp/issues")
             .license_type(gtk::License::Gpl30)
             .comments("A declarative NixOS system management tool")
+            .modal(true)
             .build();
 
         about.add_acknowledgement_section(
@@ -97,8 +98,9 @@ impl NixosToolkitApp {
         );
 
         if let Some(win) = window {
-            about.present(Some(&win));
+            about.set_transient_for(Some(&win));
         }
+        about.present();
     }
 }
 

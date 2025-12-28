@@ -15,9 +15,9 @@ repository = "https://github.com/devjonesafrica/NixOSApp"
 authors = ["NixOS Toolkit Contributors"]
 
 [workspace.dependencies]
-# GTK4 and libadwaita bindings
-gtk4 = "0.9"
-libadwaita = "0.7"
+# GTK4 and libadwaita bindings (aliased as gtk and adw)
+gtk = { package = "gtk4", version = "0.9" }
+adw = { package = "libadwaita", version = "0.7" }
 glib = "0.20"
 gio = "0.20"
 

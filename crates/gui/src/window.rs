@@ -63,7 +63,7 @@ mod imp {
 glib::wrapper! {
     pub struct MainWindow(ObjectSubclass<imp::MainWindow>)
         @extends adw::ApplicationWindow, gtk::ApplicationWindow, gtk::Window, gtk::Widget,
-        @implements gio::ActionGroup, gio::ActionMap;
+        @implements gio::ActionGroup, gio::ActionMap, gtk::Native, gtk::Root;
 }
 
 impl MainWindow {
@@ -190,7 +190,7 @@ impl MainWindow {
             600.0,
             adw::LengthUnit::Sp,
         ));
-        breakpoint.add_setter(&imp.split_view, "collapsed", &true.to_value());
+        breakpoint.add_setter(&imp.split_view, "collapsed", Some(&true.to_value()));
         self.add_breakpoint(breakpoint);
 
         self.set_content(Some(&imp.split_view));

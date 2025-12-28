@@ -3,7 +3,6 @@
 use crate::actions::{BundleDef, ProfileDef};
 use crate::config::paths;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use thiserror::Error;
 
 /// Errors that can occur during Nix generation

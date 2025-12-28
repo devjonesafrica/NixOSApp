@@ -186,7 +186,9 @@ impl MaintenancePage {
         // Show confirmation for dangerous actions
         if let Some(warning_msg) = warning {
             if let Some(window) = self.root().and_then(|r| r.downcast::<adw::ApplicationWindow>().ok()) {
-                let dialog = adw::AlertDialog::builder()
+                let dialog = adw::MessageDialog::builder()
+                    .transient_for(&window)
+                    .modal(true)
                     .heading(&format!("Run {}?", name))
                     .body(warning_msg)
                     .build();
@@ -210,7 +212,7 @@ impl MaintenancePage {
                     }),
                 );
 
-                dialog.present(Some(&window));
+                dialog.present();
                 return;
             }
         }
