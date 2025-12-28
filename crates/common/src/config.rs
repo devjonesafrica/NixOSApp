@@ -93,6 +93,12 @@ pub mod paths {
     /// Hostname snippet file
     pub const HOSTNAME_NIX: &str = "/etc/nixos/nixos-toolkit/state/hostname.nix";
 
+    /// DNS configuration snippet file
+    pub const DNS_NIX: &str = "/etc/nixos/nixos-toolkit/state/dns.nix";
+
+    /// User groups snippet file
+    pub const USERS_NIX: &str = "/etc/nixos/nixos-toolkit/state/users.nix";
+
     /// Get the managed directory path
     pub fn managed_dir() -> PathBuf {
         PathBuf::from(MANAGED_DIR)

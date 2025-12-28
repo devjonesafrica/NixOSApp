@@ -17,4 +17,4 @@ pub use actions::{
 };
 pub use config::{ConfigMode, IntegrationStatus, SystemInfo};
 pub use ipc::{HelperRequest, HelperResponse, LogLevel, RebuildType};
-pub use nix::{NixGenError, NixOutput};
+pub use nix::{NixGenError, NixGenOptions, NixOutput};

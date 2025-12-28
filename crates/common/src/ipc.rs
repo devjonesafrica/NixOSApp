@@ -164,6 +164,12 @@ pub struct AppState {
     pub enabled_bundles: Vec<String>,
     /// Custom hostname (if changed)
     pub hostname: Option<String>,
+    /// Custom DNS servers (e.g., ["1.1.1.1", "8.8.8.8"])
+    pub dns_servers: Vec<String>,
+    /// User groups to add the user to (e.g., ["libvirtd", "docker"])
+    pub user_groups: Vec<String>,
+    /// Username for group membership
+    pub username: Option<String>,
     /// Last successful apply timestamp
     pub last_applied: Option<String>,
 }

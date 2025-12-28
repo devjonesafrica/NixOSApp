@@ -1,9 +1,11 @@
-//! System settings page (hostname, etc.)
+//! System settings page (hostname, DNS, user groups)
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use common::actions::{default_system_actions, SystemActionType};
 use gtk::glib;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 mod imp {
     use super::*;
@@ -12,6 +14,9 @@ mod imp {
     pub struct SystemPage {
         pub hostname_entry: RefCell<Option<adw::EntryRow>>,
         pub current_hostname: RefCell<Option<String>>,
+        pub dns_entry: RefCell<Option<adw::EntryRow>>,
+        pub group_switches: RefCell<HashMap<String, adw::SwitchRow>>,
+        pub username_entry: RefCell<Option<adw::EntryRow>>,
     }
 
     #[glib::object_subclass]
@@ -109,29 +114,90 @@ impl SystemPage {
         info_row.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
         hostname_group.add(&info_row);
 
-        // Future settings placeholder
-        let future_group = adw::PreferencesGroup::builder()
-            .title("More Settings")
-            .description("Additional system settings coming in future updates")
+        // DNS Configuration group
+        let dns_group = adw::PreferencesGroup::builder()
+            .title("DNS Configuration")
+            .description("Set custom DNS resolvers for your system")
             .build();
 
-        let coming_soon = adw::ActionRow::builder()
-            .title("Timezone")
-            .subtitle("Coming soon")
-            .sensitive(false)
+        let dns_entry = adw::EntryRow::builder()
+            .title("DNS Servers")
+            .text("")
+            .show_apply_button(true)
             .build();
-        coming_soon.add_prefix(&gtk::Image::from_icon_name("preferences-system-time-symbolic"));
-        future_group.add(&coming_soon);
+        dns_entry.add_prefix(&gtk::Image::from_icon_name("network-server-symbolic"));
 
-        let locale_row = adw::ActionRow::builder()
-            .title("Locale")
-            .subtitle("Coming soon")
-            .sensitive(false)
+        // Add helper text
+        let dns_help = adw::ActionRow::builder()
+            .title("Format")
+            .subtitle("Enter DNS servers separated by commas (e.g., 1.1.1.1, 8.8.8.8)")
             .build();
-        locale_row.add_prefix(&gtk::Image::from_icon_name("preferences-desktop-locale-symbolic"));
-        future_group.add(&locale_row);
+        dns_help.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
 
-        self.append(&future_group);
+        dns_entry.connect_apply(glib::clone!(@weak self as page => move |entry| {
+            let dns_text = entry.text().to_string();
+            page.set_dns_servers(&dns_text);
+        }));
+
+        dns_group.add(&dns_entry);
+        dns_group.add(&dns_help);
+        *imp.dns_entry.borrow_mut() = Some(dns_entry);
+
+        self.append(&dns_group);
+
+        // User Groups section
+        let groups_group = adw::PreferencesGroup::builder()
+            .title("User Group Membership")
+            .description("Add your user to system groups for specific functionality")
+            .build();
+
+        // Username entry
+        let current_user = std::env::var("USER").unwrap_or_else(|_| "user".to_string());
+        let username_entry = adw::EntryRow::builder()
+            .title("Username")
+            .text(&current_user)
+            .show_apply_button(true)
+            .build();
+        username_entry.add_prefix(&gtk::Image::from_icon_name("avatar-default-symbolic"));
+
+        username_entry.connect_apply(glib::clone!(@weak self as page => move |entry| {
+            let username = entry.text().to_string();
+            page.set_username(&username);
+        }));
+
+        groups_group.add(&username_entry);
+        *imp.username_entry.borrow_mut() = Some(username_entry);
+
+        // Add group switches from system actions
+        let system_actions = default_system_actions();
+        for action in &system_actions {
+            if let SystemActionType::UserGroup { group } = &action.action_type {
+                let switch_row = adw::SwitchRow::builder()
+                    .title(&action.name)
+                    .subtitle(&action.description)
+                    .active(false)
+                    .build();
+                switch_row.add_prefix(&gtk::Image::from_icon_name(&action.icon));
+
+                let group_name = group.clone();
+                switch_row.connect_active_notify(glib::clone!(@weak self as page => move |switch| {
+                    page.toggle_user_group(&group_name, switch.is_active());
+                }));
+
+                groups_group.add(&switch_row);
+                imp.group_switches.borrow_mut().insert(group.clone(), switch_row);
+            }
+        }
+
+        self.append(&groups_group);
+
+        // Info banner about group changes
+        let group_info = adw::ActionRow::builder()
+            .title("Note")
+            .subtitle("Group changes require a system rebuild. You may need to log out and back in for changes to take effect.")
+            .build();
+        group_info.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+        groups_group.add(&group_info);
     }
 
     fn set_hostname(&self, hostname: &str) {
@@ -171,6 +237,108 @@ impl SystemPage {
             .borrow()
             .as_ref()
             .map(|e| e.text().to_string())
+    }
+
+    fn set_dns_servers(&self, dns_text: &str) {
+        // Parse comma-separated DNS servers
+        let servers: Vec<String> = dns_text
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        // Validate each server (basic IP format check)
+        for server in &servers {
+            if !Self::is_valid_ip(server) {
+                tracing::warn!("Invalid DNS server format: {}", server);
+                return;
+            }
+        }
+
+        // Update main window state
+        if let Some(window) = self.root().and_then(|r| r.downcast::<crate::window::MainWindow>().ok()) {
+            window.update_app_state(|state| {
+                state.set_dns_servers(servers.clone());
+            });
+        }
+
+        tracing::info!("DNS servers set to: {:?}", servers);
+    }
+
+    fn is_valid_ip(ip: &str) -> bool {
+        // Basic validation for IPv4 addresses
+        let parts: Vec<&str> = ip.split('.').collect();
+        if parts.len() != 4 {
+            return false;
+        }
+        parts.iter().all(|part| {
+            part.parse::<u8>().is_ok()
+        })
+    }
+
+    fn set_username(&self, username: &str) {
+        if username.is_empty() {
+            tracing::warn!("Empty username not allowed");
+            return;
+        }
+
+        // Basic username validation
+        if !username.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+            tracing::warn!("Invalid username characters");
+            return;
+        }
+
+        // Update main window state
+        if let Some(window) = self.root().and_then(|r| r.downcast::<crate::window::MainWindow>().ok()) {
+            window.update_app_state(|state| {
+                state.set_username(username);
+            });
+        }
+
+        tracing::info!("Username set to: {}", username);
+    }
+
+    fn toggle_user_group(&self, group: &str, active: bool) {
+        // Update main window state
+        if let Some(window) = self.root().and_then(|r| r.downcast::<crate::window::MainWindow>().ok()) {
+            window.update_app_state(|state| {
+                if active {
+                    state.add_user_group(group);
+                } else {
+                    state.remove_user_group(group);
+                }
+            });
+        }
+
+        tracing::info!("User group {} set to: {}", group, active);
+    }
+
+    /// Get current DNS servers as comma-separated string
+    pub fn get_dns_servers(&self) -> Option<String> {
+        self.imp()
+            .dns_entry
+            .borrow()
+            .as_ref()
+            .map(|e| e.text().to_string())
+    }
+
+    /// Get username for group membership
+    pub fn get_username(&self) -> Option<String> {
+        self.imp()
+            .username_entry
+            .borrow()
+            .as_ref()
+            .map(|e| e.text().to_string())
+    }
+
+    /// Check if a group switch is active
+    pub fn is_group_enabled(&self, group: &str) -> bool {
+        self.imp()
+            .group_switches
+            .borrow()
+            .get(group)
+            .map(|s| s.is_active())
+            .unwrap_or(false)
     }
 }
 
