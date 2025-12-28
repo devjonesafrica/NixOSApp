@@ -13,6 +13,12 @@ pub struct AppState {
     pub enabled_bundles: HashSet<String>,
     /// Custom hostname (if changed from current)
     pub hostname: Option<String>,
+    /// Custom DNS servers (e.g., ["1.1.1.1", "8.8.8.8"])
+    pub dns_servers: Vec<String>,
+    /// User groups to add the user to (e.g., ["libvirtd", "docker"])
+    pub user_groups: HashSet<String>,
+    /// Username for group membership
+    pub username: Option<String>,
     /// Whether there are unsaved changes
     pub has_changes: bool,
 }
@@ -69,6 +75,64 @@ impl AppState {
         self.has_changes = true;
     }
 
+    /// Set DNS servers
+    pub fn set_dns_servers(&mut self, servers: Vec<String>) {
+        self.dns_servers = servers.into_iter().filter(|s| !s.is_empty()).collect();
+        self.has_changes = true;
+    }
+
+    /// Add a DNS server
+    pub fn add_dns_server(&mut self, server: impl Into<String>) {
+        let s = server.into();
+        if !s.is_empty() && !self.dns_servers.contains(&s) {
+            self.dns_servers.push(s);
+            self.has_changes = true;
+        }
+    }
+
+    /// Clear DNS servers
+    pub fn clear_dns_servers(&mut self) {
+        if !self.dns_servers.is_empty() {
+            self.dns_servers.clear();
+            self.has_changes = true;
+        }
+    }
+
+    /// Toggle a user group on/off
+    pub fn toggle_user_group(&mut self, group: impl Into<String>) {
+        let g = group.into();
+        if self.user_groups.contains(&g) {
+            self.user_groups.remove(&g);
+        } else {
+            self.user_groups.insert(g);
+        }
+        self.has_changes = true;
+    }
+
+    /// Add user to a group
+    pub fn add_user_group(&mut self, group: impl Into<String>) {
+        self.user_groups.insert(group.into());
+        self.has_changes = true;
+    }
+
+    /// Remove user from a group
+    pub fn remove_user_group(&mut self, group: &str) {
+        self.user_groups.remove(group);
+        self.has_changes = true;
+    }
+
+    /// Check if user is in a group
+    pub fn is_in_group(&self, group: &str) -> bool {
+        self.user_groups.contains(group)
+    }
+
+    /// Set the username for group membership
+    pub fn set_username(&mut self, username: impl Into<String>) {
+        let u = username.into();
+        self.username = if u.is_empty() { None } else { Some(u) };
+        self.has_changes = true;
+    }
+
     /// Mark changes as applied
     pub fn mark_applied(&mut self) {
         self.has_changes = false;
@@ -80,6 +144,9 @@ impl AppState {
             selected_profile: self.selected_profile.clone(),
             enabled_bundles: self.enabled_bundles.iter().cloned().collect(),
             hostname: self.hostname.clone(),
+            dns_servers: self.dns_servers.clone(),
+            user_groups: self.user_groups.iter().cloned().collect(),
+            username: self.username.clone(),
             last_applied: None,
         }
     }
@@ -90,6 +157,9 @@ impl AppState {
             selected_profile: ipc.selected_profile,
             enabled_bundles: ipc.enabled_bundles.into_iter().collect(),
             hostname: ipc.hostname,
+            dns_servers: ipc.dns_servers,
+            user_groups: ipc.user_groups.into_iter().collect(),
+            username: ipc.username,
             has_changes: false,
         }
     }
@@ -109,6 +179,19 @@ impl AppState {
 
         if let Some(ref hostname) = self.hostname {
             parts.push(format!("Hostname: {}", hostname));
+        }
+
+        if !self.dns_servers.is_empty() {
+            parts.push(format!("DNS: {}", self.dns_servers.join(", ")));
+        }
+
+        if !self.user_groups.is_empty() {
+            let groups: Vec<_> = self.user_groups.iter().cloned().collect();
+            if let Some(ref user) = self.username {
+                parts.push(format!("User {} in groups: {}", user, groups.join(", ")));
+            } else {
+                parts.push(format!("User groups: {}", groups.join(", ")));
+            }
         }
 
         if parts.is_empty() {

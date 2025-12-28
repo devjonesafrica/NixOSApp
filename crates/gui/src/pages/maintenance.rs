@@ -223,15 +223,65 @@ impl MaintenancePage {
         *imp.is_running.borrow_mut() = true;
 
         self.append_log(&format!("\n--- Running: {} ---\n", name));
-        self.append_log(&format!("$ sudo {}\n\n", command));
+        self.append_log(&format!("$ pkexec {}\n\n", command));
 
-        // Note: In actual implementation, this would spawn the helper process
-        // For now, show what would be run
-        self.append_log("Note: This action requires root privileges.\n");
-        self.append_log(&format!("To run manually: sudo {}\n", command));
-        self.append_log("\nThe helper binary will execute this when fully integrated.\n");
+        // Clone values for the async closure
+        let command = command.to_string();
+        let name = name.to_string();
 
-        *imp.is_running.borrow_mut() = false;
+        // Spawn the command using pkexec for privilege elevation
+        glib::spawn_future_local(glib::clone!(@weak self as page => async move {
+            let result = page.run_privileged_command(&command).await;
+
+            match result {
+                Ok(output) => {
+                    if !output.stdout.is_empty() {
+                        page.append_log(&output.stdout);
+                    }
+                    if !output.stderr.is_empty() {
+                        page.append_log(&format!("\nStderr:\n{}", output.stderr));
+                    }
+                    if output.success {
+                        page.append_log(&format!("\n--- {} completed successfully ---\n", name));
+                    } else {
+                        page.append_log(&format!("\n--- {} failed with exit code: {} ---\n",
+                            name, output.exit_code.unwrap_or(-1)));
+                    }
+                }
+                Err(e) => {
+                    page.append_log(&format!("\nError: {}\n", e));
+                    page.append_log("Tip: Make sure polkit is configured and you have permission to run system commands.\n");
+                }
+            }
+
+            *page.imp().is_running.borrow_mut() = false;
+        }));
+    }
+
+    async fn run_privileged_command(&self, command: &str) -> Result<CommandOutput, String> {
+        // Split command into program and args
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if parts.is_empty() {
+            return Err("Empty command".to_string());
+        }
+
+        let program = parts[0];
+        let args = &parts[1..];
+
+        // Try pkexec first (standard polkit)
+        let result = tokio_process_spawn("pkexec", &[program].iter().chain(args.iter()).copied().collect::<Vec<_>>()).await;
+
+        if result.is_ok() {
+            return result;
+        }
+
+        // Fall back to trying without pkexec if the command doesn't require root
+        // (like nix-channel --update which can work for user channels)
+        if command.contains("nix-channel") {
+            return tokio_process_spawn(program, args).await;
+        }
+
+        result
     }
 
     fn append_log(&self, text: &str) {
@@ -245,6 +295,42 @@ impl MaintenancePage {
             view.scroll_to_mark(&mark, 0.0, true, 0.0, 1.0);
         }
     }
+}
+
+/// Output from a command execution
+struct CommandOutput {
+    stdout: String,
+    stderr: String,
+    success: bool,
+    exit_code: Option<i32>,
+}
+
+/// Spawn a process and capture its output
+async fn tokio_process_spawn(program: &str, args: &[&str]) -> Result<CommandOutput, String> {
+    use std::process::{Command, Stdio};
+
+    // Use blocking spawn since we're in GTK context
+    let output = std::thread::spawn({
+        let program = program.to_string();
+        let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+        move || {
+            Command::new(&program)
+                .args(&args)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+        }
+    })
+    .join()
+    .map_err(|_| "Thread panicked".to_string())?
+    .map_err(|e| format!("Failed to execute command: {}", e))?;
+
+    Ok(CommandOutput {
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        success: output.status.success(),
+        exit_code: output.status.code(),
+    })
 }
 
 impl Default for MaintenancePage {
