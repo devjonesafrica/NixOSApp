@@ -1,7 +1,10 @@
 //! Main application window with sidebar navigation
 
 use crate::integration::detect_system;
-use crate::pages::{ApplyPage, BundlesPage, MaintenancePage, OnboardingPage, ProfilesPage, SystemPage};
+use crate::pages::{
+    ApplyPage, BundlesPage, GenerationsPage, HardwarePage, MaintenancePage,
+    NetworkPage, OnboardingPage, ProfilesPage, ServicesPage, SystemPage,
+};
 use crate::state::AppState;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -87,6 +90,10 @@ impl MainWindow {
             ("profiles", "Desktop Profiles", "user-desktop-symbolic"),
             ("bundles", "Software Bundles", "package-x-generic-symbolic"),
             ("system", "System Settings", "preferences-system-symbolic"),
+            ("hardware", "Hardware", "video-display-symbolic"),
+            ("network", "Network & Security", "network-wired-symbolic"),
+            ("services", "Services", "system-run-symbolic"),
+            ("generations", "Generations", "document-open-recent-symbolic"),
             ("maintenance", "Maintenance", "user-trash-symbolic"),
             ("apply", "Apply Changes", "emblem-synchronizing-symbolic"),
         ];
@@ -120,6 +127,10 @@ impl MainWindow {
         let profiles = ProfilesPage::new();
         let bundles = BundlesPage::new();
         let system = SystemPage::new();
+        let hardware = HardwarePage::new();
+        let network = NetworkPage::new();
+        let services = ServicesPage::new();
+        let generations = GenerationsPage::new();
         let maintenance = MaintenancePage::new();
         let apply = ApplyPage::new();
 
@@ -127,6 +138,10 @@ impl MainWindow {
         imp.content_stack.add_named(&profiles, Some("profiles"));
         imp.content_stack.add_named(&bundles, Some("bundles"));
         imp.content_stack.add_named(&system, Some("system"));
+        imp.content_stack.add_named(&hardware, Some("hardware"));
+        imp.content_stack.add_named(&network, Some("network"));
+        imp.content_stack.add_named(&services, Some("services"));
+        imp.content_stack.add_named(&generations, Some("generations"));
         imp.content_stack.add_named(&maintenance, Some("maintenance"));
         imp.content_stack.add_named(&apply, Some("apply"));
 

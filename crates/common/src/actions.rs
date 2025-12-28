@@ -197,6 +197,56 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             template: "profiles/cosmic.nix".into(),
             display_manager: "cosmic-greeter".into(),
         },
+        // Tiling Window Managers
+        ProfileDef {
+            id: "hyprland".into(),
+            name: "Hyprland".into(),
+            description: "Dynamic tiling Wayland compositor with smooth animations".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/hyprland.nix".into(),
+            display_manager: "sddm".into(),
+        },
+        ProfileDef {
+            id: "sway".into(),
+            name: "Sway".into(),
+            description: "i3-compatible tiling Wayland compositor".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/sway.nix".into(),
+            display_manager: "sddm".into(),
+        },
+        ProfileDef {
+            id: "i3".into(),
+            name: "i3".into(),
+            description: "Popular tiling window manager for X11, highly configurable".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/i3.nix".into(),
+            display_manager: "lightdm".into(),
+        },
+        // Additional DEs
+        ProfileDef {
+            id: "budgie".into(),
+            name: "Budgie".into(),
+            description: "Modern desktop focusing on simplicity and elegance".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/budgie.nix".into(),
+            display_manager: "lightdm".into(),
+        },
+        ProfileDef {
+            id: "lxqt".into(),
+            name: "LXQt".into(),
+            description: "Lightweight Qt-based desktop environment".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/lxqt.nix".into(),
+            display_manager: "sddm".into(),
+        },
+        ProfileDef {
+            id: "enlightenment".into(),
+            name: "Enlightenment".into(),
+            description: "Unique, visually stunning desktop with compositing effects".into(),
+            icon: "desktop-symbolic".into(),
+            template: "profiles/enlightenment.nix".into(),
+            display_manager: "lightdm".into(),
+        },
     ]
 }
 
@@ -318,6 +368,119 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "thunderbird".into(),
                 "evince".into(),
                 "obsidian".into(),
+            ],
+        },
+        // Security Tools
+        BundleDef {
+            id: "security".into(),
+            name: "Security Tools".into(),
+            description: "Password managers, encryption, and security utilities".into(),
+            icon: "security-high-symbolic".into(),
+            category: ActionCategory::Security,
+            template: "bundles/security.nix".into(),
+            packages: vec![
+                "keepassxc".into(),
+                "bitwarden".into(),
+                "veracrypt".into(),
+                "gnupg".into(),
+                "age".into(),
+            ],
+        },
+        // Communication
+        BundleDef {
+            id: "communication".into(),
+            name: "Communication".into(),
+            description: "Chat, video calls, and messaging applications".into(),
+            icon: "user-available-symbolic".into(),
+            category: ActionCategory::Network,
+            template: "bundles/communication.nix".into(),
+            packages: vec![
+                "discord".into(),
+                "signal-desktop".into(),
+                "element-desktop".into(),
+                "slack".into(),
+                "zoom-us".into(),
+            ],
+        },
+        // Browsers
+        BundleDef {
+            id: "browsers".into(),
+            name: "Web Browsers".into(),
+            description: "Additional web browsers with different privacy/feature focuses".into(),
+            icon: "web-browser-symbolic".into(),
+            category: ActionCategory::Network,
+            template: "bundles/browsers.nix".into(),
+            packages: vec![
+                "firefox".into(),
+                "chromium".into(),
+                "brave".into(),
+                "tor-browser".into(),
+            ],
+        },
+        // Science & Math
+        BundleDef {
+            id: "science".into(),
+            name: "Science & Math".into(),
+            description: "Scientific computing, math tools, and LaTeX".into(),
+            icon: "accessories-calculator-symbolic".into(),
+            category: ActionCategory::Development,
+            template: "bundles/science.nix".into(),
+            packages: vec![
+                "octave".into(),
+                "julia".into(),
+                "R".into(),
+                "texlive".into(),
+                "gnuplot".into(),
+            ],
+        },
+        // 3D & CAD
+        BundleDef {
+            id: "cad".into(),
+            name: "3D & CAD".into(),
+            description: "3D modeling, CAD, and design software".into(),
+            icon: "applications-graphics-symbolic".into(),
+            category: ActionCategory::Multimedia,
+            template: "bundles/cad.nix".into(),
+            packages: vec![
+                "blender".into(),
+                "freecad".into(),
+                "openscad".into(),
+                "kicad".into(),
+            ],
+        },
+        // System Utilities
+        BundleDef {
+            id: "utilities".into(),
+            name: "System Utilities".into(),
+            description: "Helpful command-line and system tools".into(),
+            icon: "utilities-system-monitor-symbolic".into(),
+            category: ActionCategory::System,
+            template: "bundles/utilities.nix".into(),
+            packages: vec![
+                "htop".into(),
+                "btop".into(),
+                "neofetch".into(),
+                "tmux".into(),
+                "tree".into(),
+                "unzip".into(),
+                "wget".into(),
+                "curl".into(),
+            ],
+        },
+        // Fonts
+        BundleDef {
+            id: "fonts".into(),
+            name: "Fonts Collection".into(),
+            description: "Popular fonts for development, documents, and design".into(),
+            icon: "font-x-generic-symbolic".into(),
+            category: ActionCategory::System,
+            template: "bundles/fonts.nix".into(),
+            packages: vec![
+                "nerd-fonts".into(),
+                "fira-code".into(),
+                "jetbrains-mono".into(),
+                "inter".into(),
+                "noto-fonts".into(),
             ],
         },
     ]

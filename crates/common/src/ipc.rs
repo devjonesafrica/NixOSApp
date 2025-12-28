@@ -46,6 +46,18 @@ pub enum HelperRequest {
 
     /// Write state to state.json
     WriteState { state: AppState },
+
+    /// List all NixOS generations
+    ListGenerations,
+
+    /// Rollback to a specific generation
+    RollbackGeneration { generation: u32 },
+
+    /// Delete specific generations
+    DeleteGenerations { generations: Vec<u32> },
+
+    /// Run a maintenance command
+    RunMaintenance { command: String },
 }
 
 /// Type of nixos-rebuild to run
@@ -126,6 +138,29 @@ pub enum HelperResponse {
 
     /// Current application state
     State(AppState),
+
+    /// List of NixOS generations
+    Generations(Vec<Generation>),
+
+    /// Maintenance command output
+    MaintenanceOutput { stdout: String, stderr: String, success: bool },
+}
+
+/// Information about a NixOS generation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Generation {
+    /// Generation number
+    pub number: u32,
+    /// Date and time the generation was created
+    pub date: String,
+    /// Whether this is the current generation
+    pub current: bool,
+    /// NixOS version (if detectable)
+    pub nixos_version: Option<String>,
+    /// Kernel version (if detectable)
+    pub kernel_version: Option<String>,
+    /// Configuration revision (if using flakes)
+    pub config_rev: Option<String>,
 }
 
 /// A file that will be/was generated

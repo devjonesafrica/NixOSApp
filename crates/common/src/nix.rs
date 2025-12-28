@@ -209,6 +209,247 @@ pub fn generate_user_groups_nix(username: &str, groups: &[String]) -> String {
     )
 }
 
+/// Generate the firewall.nix file content
+pub fn generate_firewall_nix(enabled: bool, tcp_ports: &[u16], udp_ports: &[u16]) -> String {
+    let tcp_str = tcp_ports
+        .iter()
+        .map(|p| p.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let udp_str = udp_ports
+        .iter()
+        .map(|p| p.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    format!(
+        r#"# NixOS Toolkit - Firewall Configuration
+# DO NOT EDIT MANUALLY
+
+{{ config, lib, pkgs, ... }}:
+
+{{
+  networking.firewall = {{
+    enable = {};
+    allowedTCPPorts = [ {} ];
+    allowedUDPPorts = [ {} ];
+  }};
+}}
+"#,
+        if enabled { "true" } else { "false" },
+        tcp_str,
+        udp_str
+    )
+}
+
+/// Generate the ssh.nix file content
+pub fn generate_ssh_nix(
+    enabled: bool,
+    port: u16,
+    password_auth: bool,
+    root_login: &str,
+    fail2ban: bool,
+) -> String {
+    let mut config = format!(
+        r#"# NixOS Toolkit - SSH Configuration
+# DO NOT EDIT MANUALLY
+
+{{ config, lib, pkgs, ... }}:
+
+{{
+  services.openssh = {{
+    enable = {};
+    ports = [ {} ];
+    settings = {{
+      PasswordAuthentication = {};
+      PermitRootLogin = "{}";
+    }};
+  }};
+"#,
+        if enabled { "true" } else { "false" },
+        port,
+        if password_auth { "true" } else { "false" },
+        root_login
+    );
+
+    if fail2ban {
+        config.push_str(r#"
+  services.fail2ban = {
+    enable = true;
+    jails.sshd = {
+      enabled = true;
+    };
+  };
+"#);
+    }
+
+    config.push_str("}\n");
+    config
+}
+
+/// Generate the hardware.nix file content for GPU, audio, bluetooth, power
+pub fn generate_hardware_nix(
+    nvidia_enabled: bool,
+    nvidia_open: bool,
+    audio_pipewire: bool,
+    bluetooth_enabled: bool,
+    tlp_enabled: bool,
+    thermald_enabled: bool,
+) -> String {
+    let mut sections = Vec::new();
+
+    // NVIDIA section
+    if nvidia_enabled {
+        sections.push(format!(
+            r#"  # NVIDIA GPU
+  services.xserver.videoDrivers = [ "nvidia" ];
+  hardware.nvidia = {{
+    modesetting.enable = true;
+    powerManagement.enable = true;
+    open = {};
+  }};
+  hardware.graphics.enable = true;"#,
+            if nvidia_open { "true" } else { "false" }
+        ));
+    }
+
+    // Audio section
+    if audio_pipewire {
+        sections.push(r#"  # PipeWire Audio
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    jack.enable = true;
+  };
+  security.rtkit.enable = true;"#.to_string());
+    }
+
+    // Bluetooth section
+    if bluetooth_enabled {
+        sections.push(r#"  # Bluetooth
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  services.blueman.enable = true;"#.to_string());
+    }
+
+    // Power management
+    if tlp_enabled {
+        sections.push(r#"  # TLP Power Management
+  services.tlp = {
+    enable = true;
+    settings = {
+      CPU_SCALING_GOVERNOR_ON_AC = "performance";
+      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+    };
+  };
+  services.power-profiles-daemon.enable = false;"#.to_string());
+    }
+
+    if thermald_enabled {
+        sections.push(r#"  # Thermal Management
+  services.thermald.enable = true;"#.to_string());
+    }
+
+    format!(
+        r#"# NixOS Toolkit - Hardware Configuration
+# DO NOT EDIT MANUALLY
+
+{{ config, lib, pkgs, ... }}:
+
+{{
+{}
+}}
+"#,
+        sections.join("\n\n")
+    )
+}
+
+/// Generate the services.nix file content
+pub fn generate_services_nix(services: &[&str]) -> String {
+    let mut sections = Vec::new();
+
+    for service in services {
+        let section = match *service {
+            "printing" => r#"  # Printing
+  services.printing.enable = true;
+  services.avahi.enable = true;
+  services.avahi.nssmdns4 = true;"#,
+            "avahi" => r#"  # Avahi/mDNS
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    publish.enable = true;
+  };"#,
+            "fwupd" => r#"  # Firmware Updates
+  services.fwupd.enable = true;"#,
+            "upower" => r#"  # UPower
+  services.upower.enable = true;"#,
+            "networkmanager" => r#"  # NetworkManager
+  networking.networkmanager.enable = true;"#,
+            "resolved" => r#"  # systemd-resolved
+  services.resolved.enable = true;"#,
+            "syncthing" => r#"  # Syncthing
+  services.syncthing.enable = true;"#,
+            "locate" => r#"  # Locate Database
+  services.locate = {
+    enable = true;
+    package = pkgs.plocate;
+    localuser = null;
+  };"#,
+            "flatpak" => r#"  # Flatpak
+  services.flatpak.enable = true;
+  xdg.portal.enable = true;"#,
+            "gnome_keyring" => r#"  # GNOME Keyring
+  services.gnome.gnome-keyring.enable = true;"#,
+            "dconf" => r#"  # dconf
+  programs.dconf.enable = true;"#,
+            "docker" => r#"  # Docker
+  virtualisation.docker.enable = true;"#,
+            "libvirtd" => r#"  # libvirtd
+  virtualisation.libvirtd.enable = true;
+  programs.virt-manager.enable = true;"#,
+            "postgresql" => r#"  # PostgreSQL
+  services.postgresql.enable = true;"#,
+            "redis" => r#"  # Redis
+  services.redis.servers."".enable = true;"#,
+            "earlyoom" => r#"  # Early OOM
+  services.earlyoom.enable = true;"#,
+            "auto_upgrade" => r#"  # Auto Upgrade
+  system.autoUpgrade.enable = true;"#,
+            "auto_gc" => r#"  # Automatic Garbage Collection
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };"#,
+            "store_optimize" => r#"  # Store Optimization
+  nix.settings.auto-optimise-store = true;"#,
+            "tailscale" => r#"  # Tailscale VPN
+  services.tailscale.enable = true;"#,
+            _ => continue,
+        };
+        sections.push(section.to_string());
+    }
+
+    format!(
+        r#"# NixOS Toolkit - Services Configuration
+# DO NOT EDIT MANUALLY
+
+{{ config, lib, pkgs, ... }}:
+
+{{
+{}
+}}
+"#,
+        sections.join("\n\n")
+    )
+}
+
 /// Read a template file from the templates directory
 pub fn read_template(template_path: &str) -> Result<String, NixGenError> {
     let templates_dir = paths::templates_dir();
