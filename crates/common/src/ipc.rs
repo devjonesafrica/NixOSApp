@@ -1,9 +1,7 @@
 //! IPC message types for communication between GUI and helper
 
-use crate::actions::{ActionConfig, ActionId};
 use crate::config::SystemInfo;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Request from GUI to helper
 #[derive(Debug, Clone, Serialize, Deserialize)]

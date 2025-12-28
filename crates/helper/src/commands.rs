@@ -3,7 +3,7 @@
 use crate::nix_gen;
 use crate::rebuild;
 use common::config::{paths, ConfigMode, IntegrationStatus, SystemInfo};
-use common::ipc::{AppState, GeneratedFile, HelperResponse, RebuildType};
+use common::ipc::{AppState, Generation, HelperResponse, RebuildType};
 use std::fs;
 use std::path::Path;
 
@@ -321,6 +321,189 @@ pub fn write_state(state: AppState) -> HelperResponse {
         }
         Err(e) => HelperResponse::Error {
             message: "Failed to serialize state".into(),
+            details: Some(e.to_string()),
+        },
+    }
+}
+
+/// List all NixOS system generations
+pub fn list_generations() -> HelperResponse {
+    use std::process::Command;
+
+    let output = Command::new("nix-env")
+        .args(["--list-generations", "-p", "/nix/var/nix/profiles/system"])
+        .output();
+
+    match output {
+        Ok(output) => {
+            if !output.status.success() {
+                return HelperResponse::Error {
+                    message: "Failed to list generations".into(),
+                    details: Some(String::from_utf8_lossy(&output.stderr).to_string()),
+                };
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut generations = Vec::new();
+
+            for line in stdout.lines() {
+                if let Some(gen) = parse_generation_line(line) {
+                    generations.push(gen);
+                }
+            }
+
+            // Sort by generation number descending
+            generations.sort_by(|a, b| b.number.cmp(&a.number));
+
+            HelperResponse::Generations(generations)
+        }
+        Err(e) => HelperResponse::Error {
+            message: "Failed to execute nix-env".into(),
+            details: Some(e.to_string()),
+        },
+    }
+}
+
+fn parse_generation_line(line: &str) -> Option<Generation> {
+    let line = line.trim();
+    if line.is_empty() {
+        return None;
+    }
+
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.is_empty() {
+        return None;
+    }
+
+    let number: u32 = parts[0].parse().ok()?;
+    let current = line.contains("(current)");
+
+    // Try to extract date
+    let date = if parts.len() >= 3 {
+        format!("{} {}", parts[1], parts.get(2).unwrap_or(&""))
+    } else {
+        "Unknown".to_string()
+    };
+
+    Some(Generation {
+        number,
+        date,
+        current,
+        nixos_version: None,
+        kernel_version: None,
+        config_rev: None,
+    })
+}
+
+/// Rollback to a specific generation
+pub fn rollback_generation(generation: u32) -> HelperResponse {
+    use std::process::Command;
+
+    // Switch to the specified generation
+    let switch_output = Command::new("nix-env")
+        .args([
+            "-p",
+            "/nix/var/nix/profiles/system",
+            "--switch-generation",
+            &generation.to_string(),
+        ])
+        .output();
+
+    match switch_output {
+        Ok(output) if output.status.success() => {
+            // Activate the generation
+            let activate_output = Command::new("/nix/var/nix/profiles/system/bin/switch-to-configuration")
+                .arg("switch")
+                .output();
+
+            match activate_output {
+                Ok(output) if output.status.success() => HelperResponse::Ok,
+                Ok(output) => HelperResponse::Error {
+                    message: "Failed to activate generation".into(),
+                    details: Some(String::from_utf8_lossy(&output.stderr).to_string()),
+                },
+                Err(e) => HelperResponse::Error {
+                    message: "Failed to run switch-to-configuration".into(),
+                    details: Some(e.to_string()),
+                },
+            }
+        }
+        Ok(output) => HelperResponse::Error {
+            message: "Failed to switch generation".into(),
+            details: Some(String::from_utf8_lossy(&output.stderr).to_string()),
+        },
+        Err(e) => HelperResponse::Error {
+            message: "Failed to execute nix-env".into(),
+            details: Some(e.to_string()),
+        },
+    }
+}
+
+/// Delete specific generations
+pub fn delete_generations(generations: Vec<u32>) -> HelperResponse {
+    use std::process::Command;
+
+    let gen_args: Vec<String> = generations.iter().map(|g| g.to_string()).collect();
+
+    let output = Command::new("nix-env")
+        .args(["-p", "/nix/var/nix/profiles/system", "--delete-generations"])
+        .args(&gen_args)
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => HelperResponse::Ok,
+        Ok(output) => HelperResponse::Error {
+            message: "Failed to delete generations".into(),
+            details: Some(String::from_utf8_lossy(&output.stderr).to_string()),
+        },
+        Err(e) => HelperResponse::Error {
+            message: "Failed to execute nix-env".into(),
+            details: Some(e.to_string()),
+        },
+    }
+}
+
+/// Run a maintenance command
+pub fn run_maintenance(command: String) -> HelperResponse {
+    use std::process::Command;
+
+    // Only allow specific maintenance commands for security
+    let allowed_commands = [
+        "nix-collect-garbage",
+        "nix-collect-garbage -d",
+        "nix-store --optimise",
+        "nix-store --verify --check-contents",
+        "nix-channel --update",
+    ];
+
+    if !allowed_commands.contains(&command.as_str()) {
+        return HelperResponse::Error {
+            message: "Command not allowed".into(),
+            details: Some(format!("Only these commands are allowed: {:?}", allowed_commands)),
+        };
+    }
+
+    // Parse and execute command
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
+        return HelperResponse::Error {
+            message: "Empty command".into(),
+            details: None,
+        };
+    }
+
+    let output = Command::new(parts[0])
+        .args(&parts[1..])
+        .output();
+
+    match output {
+        Ok(output) => HelperResponse::MaintenanceOutput {
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            success: output.status.success(),
+        },
+        Err(e) => HelperResponse::Error {
+            message: "Failed to execute command".into(),
             details: Some(e.to_string()),
         },
     }

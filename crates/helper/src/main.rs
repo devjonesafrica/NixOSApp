@@ -98,5 +98,9 @@ fn handle_request(request: HelperRequest) -> HelperResponse {
         HelperRequest::EnsureDirectories => commands::ensure_directories(),
         HelperRequest::ReadState => commands::read_state(),
         HelperRequest::WriteState { state } => commands::write_state(state),
+        HelperRequest::ListGenerations => commands::list_generations(),
+        HelperRequest::RollbackGeneration { generation } => commands::rollback_generation(generation),
+        HelperRequest::DeleteGenerations { generations } => commands::delete_generations(generations),
+        HelperRequest::RunMaintenance { command } => commands::run_maintenance(command),
     }
 }

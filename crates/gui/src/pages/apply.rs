@@ -200,7 +200,9 @@ impl ApplyPage {
 
     fn show_apply_dialog(&self) {
         if let Some(window) = self.root().and_then(|r| r.downcast::<adw::ApplicationWindow>().ok()) {
-            let dialog = adw::AlertDialog::builder()
+            let dialog = adw::MessageDialog::builder()
+                .transient_for(&window)
+                .modal(true)
                 .heading("Apply Configuration?")
                 .body("This will run 'nixos-rebuild switch' with your selected configuration.\n\nMake sure you have reviewed the preview above.")
                 .build();
@@ -222,7 +224,7 @@ impl ApplyPage {
                 }),
             );
 
-            dialog.present(Some(&window));
+            dialog.present();
         }
     }
 

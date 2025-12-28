@@ -10,9 +10,9 @@ name = "gui"
 path = "src/main.rs"
 
 [dependencies]
-# GTK4 and libadwaita
-gtk4 = { workspace = true }
-libadwaita = { workspace = true, features = ["v1_4"] }
+# GTK4 and libadwaita (aliased as gtk and adw)
+gtk = { workspace = true }
+adw = { workspace = true, features = ["v1_4"] }
 glib = { workspace = true }
 gio = { workspace = true }
 

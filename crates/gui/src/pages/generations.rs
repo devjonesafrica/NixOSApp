@@ -368,7 +368,9 @@ impl GenerationsPage {
 
     fn switch_to_generation(&self, generation: u32) {
         if let Some(window) = self.root().and_then(|r| r.downcast::<adw::ApplicationWindow>().ok()) {
-            let dialog = adw::AlertDialog::builder()
+            let dialog = adw::MessageDialog::builder()
+                .transient_for(&window)
+                .modal(true)
                 .heading(&format!("Switch to Generation {}?", generation))
                 .body("This will rebuild your system to use the selected generation. The system will activate the new configuration.")
                 .build();
@@ -393,7 +395,7 @@ impl GenerationsPage {
                 }),
             );
 
-            dialog.present(Some(&window));
+            dialog.present();
         }
     }
 
@@ -401,6 +403,7 @@ impl GenerationsPage {
         self.append_log(&format!("\n--- Switching to generation {} ({}) ---\n", generation, mode));
 
         let mode = mode.to_string();
+        let mode_for_check = mode.clone();
         glib::spawn_future_local(glib::clone!(@weak self as page => async move {
             let result = std::thread::spawn(move || {
                 // Build the profile path for the specific generation
@@ -428,12 +431,12 @@ impl GenerationsPage {
             })
             .join()
             .ok()
-            .flatten();
+            .and_then(|r| r.ok());
 
             match result {
                 Some(output) if output.status.success() => {
                     page.append_log("Switch successful!\n");
-                    if mode == "boot" {
+                    if mode_for_check == "boot" {
                         page.append_log("The selected generation will be activated on next boot.\n");
                     }
                     page.load_generations();
@@ -451,7 +454,9 @@ impl GenerationsPage {
 
     fn confirm_delete_generation(&self, generation: u32) {
         if let Some(window) = self.root().and_then(|r| r.downcast::<adw::ApplicationWindow>().ok()) {
-            let dialog = adw::AlertDialog::builder()
+            let dialog = adw::MessageDialog::builder()
+                .transient_for(&window)
+                .modal(true)
                 .heading(&format!("Delete Generation {}?", generation))
                 .body("This will permanently delete this generation. You will not be able to boot into or rollback to this configuration.")
                 .build();
@@ -473,7 +478,7 @@ impl GenerationsPage {
                 }),
             );
 
-            dialog.present(Some(&window));
+            dialog.present();
         }
     }
 
@@ -488,7 +493,7 @@ impl GenerationsPage {
             })
             .join()
             .ok()
-            .flatten();
+            .and_then(|r| r.ok());
 
             match result {
                 Some(output) if output.status.success() => {
