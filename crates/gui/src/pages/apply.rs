@@ -19,6 +19,8 @@ mod imp {
         pub preview_view: RefCell<Option<gtk::TextView>>,
         pub log_view: RefCell<Option<gtk::TextView>>,
         pub apply_button: RefCell<Option<gtk::Button>>,
+        pub spinner: RefCell<Option<gtk::Spinner>>,
+        pub status_label: RefCell<Option<gtk::Label>>,
         pub is_applying: RefCell<bool>,
     }
 
@@ -141,8 +143,25 @@ impl ApplyPage {
             page.do_dry_run();
         }));
 
+        // Spinner for progress indication
+        let spinner = gtk::Spinner::builder()
+            .spinning(false)
+            .visible(false)
+            .build();
+        *imp.spinner.borrow_mut() = Some(spinner.clone());
+
+        // Status label
+        let status_label = gtk::Label::builder()
+            .label("")
+            .css_classes(["dim-label"])
+            .visible(false)
+            .build();
+        *imp.status_label.borrow_mut() = Some(status_label.clone());
+
         button_box.append(&apply_button);
         button_box.append(&dry_run_button);
+        button_box.append(&spinner);
+        button_box.append(&status_label);
         self.append(&button_box);
 
         // Log section
@@ -244,10 +263,20 @@ impl ApplyPage {
 
         *imp.is_applying.borrow_mut() = true;
 
-        // Disable apply button
+        // Disable apply button and show spinner
         if let Some(ref button) = *imp.apply_button.borrow() {
             button.set_sensitive(false);
             button.set_label("Applying...");
+        }
+
+        // Show spinner and status
+        if let Some(ref spinner) = *imp.spinner.borrow() {
+            spinner.set_visible(true);
+            spinner.set_spinning(true);
+        }
+        if let Some(ref label) = *imp.status_label.borrow() {
+            label.set_visible(true);
+            label.set_label("Building configuration...");
         }
 
         // Clear log
@@ -392,9 +421,29 @@ impl ApplyPage {
         let imp = self.imp();
         *imp.is_applying.borrow_mut() = false;
 
+        // Re-enable button
         if let Some(ref button) = *imp.apply_button.borrow() {
             button.set_sensitive(true);
             button.set_label("Apply Changes");
+        }
+
+        // Stop and hide spinner
+        if let Some(ref spinner) = *imp.spinner.borrow() {
+            spinner.set_spinning(false);
+            spinner.set_visible(false);
+        }
+
+        // Update status label
+        if let Some(ref label) = *imp.status_label.borrow() {
+            if success {
+                label.set_label("✓ Complete");
+                label.remove_css_class("error");
+                label.add_css_class("success");
+            } else {
+                label.set_label("✗ Failed");
+                label.remove_css_class("success");
+                label.add_css_class("error");
+            }
         }
 
         if success {
