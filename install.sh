@@ -17,7 +17,7 @@ if [ ! -f /etc/NIXOS ]; then
     echo "Warning: This doesn't appear to be a NixOS system."
     echo "The toolkit is designed for NixOS."
     read -p "Continue anyway? [y/N] " -n 1 -r
-    echo
+    echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
@@ -32,7 +32,7 @@ check_flakes() {
     fi
 }
 
-# Detect shell
+# Detect shell config file
 detect_shell() {
     case "$SHELL" in
         */zsh) echo ".zshrc" ;;
@@ -70,7 +70,7 @@ fi
 # Offer to create alias
 echo "-----------------------------------"
 read -p "Create shell alias '$ALIAS_NAME'? [Y/n] " -n 1 -r
-echo
+echo ""
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     SHELL_RC="$HOME/$(detect_shell)"
 
@@ -100,7 +100,7 @@ fi
 # Offer to create desktop entry
 echo "-----------------------------------"
 read -p "Create desktop entry (application menu)? [Y/n] " -n 1 -r
-echo
+echo ""
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     DESKTOP_DIR="$HOME/.local/share/applications"
     mkdir -p "$DESKTOP_DIR"
