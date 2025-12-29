@@ -51,16 +51,29 @@ impl ApplyPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
     fn setup_ui(&self) {
         let imp = self.imp();
+
+        // Wrap everything in a scrolled window
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
 
         // Title
         let title = gtk::Label::builder()
@@ -68,7 +81,7 @@ impl ApplyPage {
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -77,7 +90,7 @@ impl ApplyPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // Preview section
         let preview_group = adw::PreferencesGroup::builder()
@@ -86,7 +99,7 @@ impl ApplyPage {
             .build();
 
         let preview_scroll = gtk::ScrolledWindow::builder()
-            .height_request(250)
+            .height_request(200)
             .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
@@ -105,7 +118,7 @@ impl ApplyPage {
         *imp.preview_view.borrow_mut() = Some(preview_view);
 
         preview_group.add(&preview_scroll);
-        self.append(&preview_group);
+        content.append(&preview_group);
 
         // Refresh preview button
         let refresh_button = gtk::Button::builder()
@@ -115,7 +128,7 @@ impl ApplyPage {
         refresh_button.connect_clicked(glib::clone!(@weak self as page => move |_| {
             page.refresh_preview();
         }));
-        self.append(&refresh_button);
+        content.append(&refresh_button);
 
         // Action buttons
         let button_box = gtk::Box::builder()
@@ -162,7 +175,7 @@ impl ApplyPage {
         button_box.append(&dry_run_button);
         button_box.append(&spinner);
         button_box.append(&status_label);
-        self.append(&button_box);
+        content.append(&button_box);
 
         // Log section
         let log_group = adw::PreferencesGroup::builder()
@@ -190,7 +203,10 @@ impl ApplyPage {
         *imp.log_view.borrow_mut() = Some(log_view);
 
         log_group.add(&log_scroll);
-        self.append(&log_group);
+        content.append(&log_group);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
     }
 
     fn refresh_preview(&self) {

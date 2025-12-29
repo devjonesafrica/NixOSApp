@@ -43,16 +43,29 @@ impl GenerationsPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
     fn setup_ui(&self) {
         let imp = self.imp();
+
+        // Wrap everything in a scrolled window
+        let outer_scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
 
         // Title
         let title = gtk::Label::builder()
@@ -60,7 +73,7 @@ impl GenerationsPage {
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -69,7 +82,7 @@ impl GenerationsPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // Actions bar
         let actions_box = gtk::Box::builder()
@@ -96,7 +109,7 @@ impl GenerationsPage {
         }));
         actions_box.append(&rollback_button);
 
-        self.append(&actions_box);
+        content.append(&actions_box);
 
         // Generations list
         let generations_group = adw::PreferencesGroup::builder()
@@ -105,7 +118,7 @@ impl GenerationsPage {
             .build();
 
         let scroll = gtk::ScrolledWindow::builder()
-            .height_request(300)
+            .height_request(250)
             .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
@@ -117,7 +130,7 @@ impl GenerationsPage {
         *imp.generations_list.borrow_mut() = Some(list);
 
         generations_group.add(&scroll);
-        self.append(&generations_group);
+        content.append(&generations_group);
 
         // Boot menu info
         let boot_info = adw::PreferencesGroup::builder()
@@ -131,7 +144,7 @@ impl GenerationsPage {
         boot_row.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
         boot_info.add(&boot_row);
 
-        self.append(&boot_info);
+        content.append(&boot_info);
 
         // Log section
         let log_group = adw::PreferencesGroup::builder()
@@ -158,7 +171,10 @@ impl GenerationsPage {
         *imp.log_view.borrow_mut() = Some(log_view);
 
         log_group.add(&log_scroll);
-        self.append(&log_group);
+        content.append(&log_group);
+
+        outer_scroll.set_child(Some(&content));
+        self.append(&outer_scroll);
 
         // Load generations on startup
         self.load_generations();

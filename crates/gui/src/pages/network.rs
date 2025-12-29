@@ -52,16 +52,29 @@ impl NetworkPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
     fn setup_ui(&self) {
         let imp = self.imp();
+
+        // Wrap everything in a scrolled window
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
 
         // Title
         let title = gtk::Label::builder()
@@ -69,7 +82,7 @@ impl NetworkPage {
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -78,18 +91,7 @@ impl NetworkPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
-
-        // Scrollable content
-        let scroll = gtk::ScrolledWindow::builder()
-            .vexpand(true)
-            .vscrollbar_policy(gtk::PolicyType::Automatic)
-            .build();
-
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(24)
-            .build();
+        content.append(&desc);
 
         // === Firewall Configuration ===
         let firewall_group = adw::PreferencesGroup::builder()
@@ -274,16 +276,18 @@ impl NetworkPage {
 
         content.append(&vpn_group);
 
-        scroll.set_child(Some(&content));
-        self.append(&scroll);
-
         // Note about changes
+        let note_group = adw::PreferencesGroup::new();
         let note = adw::ActionRow::builder()
             .title("Note")
             .subtitle("Network changes require a system rebuild to take effect.")
             .build();
         note.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
-        self.append(&note);
+        note_group.add(&note);
+        content.append(&note_group);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
     }
 
     fn toggle_port(&self, port: u16, enabled: bool) {
