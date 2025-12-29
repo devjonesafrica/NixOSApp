@@ -106,6 +106,7 @@ impl GenerationsPage {
 
         let scroll = gtk::ScrolledWindow::builder()
             .height_request(300)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let list = gtk::ListBox::builder()
@@ -139,6 +140,7 @@ impl GenerationsPage {
 
         let log_scroll = gtk::ScrolledWindow::builder()
             .height_request(150)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let log_view = gtk::TextView::builder()

@@ -83,6 +83,7 @@ impl NetworkPage {
         // Scrollable content
         let scroll = gtk::ScrolledWindow::builder()
             .vexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let content = gtk::Box::builder()

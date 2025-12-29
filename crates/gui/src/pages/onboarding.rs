@@ -96,6 +96,7 @@ impl OnboardingPage {
         // Code snippet view
         let snippet_scroll = gtk::ScrolledWindow::builder()
             .height_request(180)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let snippet_view = gtk::TextView::builder()
