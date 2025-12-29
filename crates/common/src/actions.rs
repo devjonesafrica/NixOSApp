@@ -365,14 +365,37 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "git".into(),
                 "neovim".into(),
+                "emacs".into(),
                 "vscode".into(),
+                "vscodium".into(),
+                "zed-editor".into(),
+                "cursor".into(),
+                "windsurf".into(),
+                "warp-terminal".into(),
+                "github-desktop".into(),
                 "rustup".into(),
                 "nodejs".into(),
                 "python3".into(),
                 "docker".into(),
             ],
             arm_compat: ArmCompat::Partial,
-            arm_note: Some("VSCode binary not available; use vscodium or code-oss".into()),
+            arm_note: Some("VSCode, Cursor, Windsurf, Warp binaries not available on ARM".into()),
+        },
+        // AI Tools
+        BundleDef {
+            id: "ai-tools".into(),
+            name: "AI Tools".into(),
+            description: "AI coding assistants, local LLMs, and AI-powered development tools".into(),
+            icon: "applications-science-symbolic".into(),
+            category: ActionCategory::Development,
+            template: "bundles/ai-tools.nix".into(),
+            packages: vec![
+                "claude-code".into(),
+                "github-copilot-cli".into(),
+                "ollama".into(),
+            ],
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("Some AI tools may have limited ARM support".into()),
         },
         // Gaming
         BundleDef {
@@ -385,11 +408,13 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "steam".into(),
                 "lutris".into(),
+                "heroic".into(),
+                "bottles".into(),
                 "mangohud".into(),
                 "gamemode".into(),
             ],
             arm_compat: ArmCompat::None,
-            arm_note: Some("Steam, Lutris, Wine, and Proton are x86_64 only".into()),
+            arm_note: Some("Steam, Lutris, Heroic, Bottles, Wine are x86_64 only".into()),
         },
         // Virtualization
         BundleDef {
@@ -480,6 +505,7 @@ pub fn default_bundles() -> Vec<BundleDef> {
             template: "bundles/office.nix".into(),
             packages: vec![
                 "libreoffice".into(),
+                "onlyoffice-bin".into(),
                 "thunderbird".into(),
                 "evince".into(),
                 "obsidian".into(),
@@ -498,12 +524,13 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "keepassxc".into(),
                 "bitwarden".into(),
+                "_1password-gui".into(),
                 "veracrypt".into(),
                 "gnupg".into(),
                 "age".into(),
             ],
-            arm_compat: ArmCompat::Full,
-            arm_note: None,
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("1Password binary not available on ARM".into()),
         },
         // Communication
         BundleDef {
@@ -534,11 +561,12 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "firefox".into(),
                 "chromium".into(),
+                "google-chrome".into(),
                 "brave".into(),
                 "tor-browser".into(),
             ],
-            arm_compat: ArmCompat::Full,
-            arm_note: None,
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("Google Chrome binary not available on ARM".into()),
         },
         // Science & Math
         BundleDef {
@@ -592,6 +620,7 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "unzip".into(),
                 "wget".into(),
                 "curl".into(),
+                "appimage-run".into(),
             ],
             arm_compat: ArmCompat::Full,
             arm_note: None,
