@@ -116,6 +116,7 @@
           preFixup = ''
             gappsWrapperArgs+=(
               --set NIXOS_TOOLKIT_TEMPLATES_DIR "$out/share/nixos-toolkit/templates"
+              --set NIXOS_TOOLKIT_HELPER "${nixos-toolkit-helper}/bin/nixos-toolkit-helper"
               --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.wl-clipboard pkgs.xclip ]}
             )
           '';

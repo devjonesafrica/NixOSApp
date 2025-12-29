@@ -16,14 +16,25 @@ pub struct HelperClient {
 }
 
 impl HelperClient {
+    /// Get the path to the helper binary
+    fn helper_path() -> String {
+        // Check for environment variable first (set by nix wrapper)
+        std::env::var("NIXOS_TOOLKIT_HELPER")
+            .unwrap_or_else(|_| "nixos-toolkit-helper".to_string())
+    }
+
     /// Spawn the helper with pkexec for privilege escalation
     pub fn spawn_privileged() -> Result<Self> {
-        Self::spawn_with_command("pkexec", &["nixos-toolkit-helper"])
+        let helper = Self::helper_path();
+        tracing::info!("Spawning helper with pkexec: {}", helper);
+        Self::spawn_with_command("pkexec", &[&helper])
     }
 
     /// Spawn the helper directly (for development/dry-run)
     pub fn spawn() -> Result<Self> {
-        Self::spawn_with_command("nixos-toolkit-helper", &[])
+        let helper = Self::helper_path();
+        tracing::info!("Spawning helper directly: {}", helper);
+        Self::spawn_with_command(&helper, &[])
     }
 
     /// Spawn helper with custom command
