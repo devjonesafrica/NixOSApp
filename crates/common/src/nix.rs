@@ -408,6 +408,8 @@ pub fn generate_services_nix(services: &[&str]) -> String {
   xdg.portal.enable = true;"#,
             "gnome_keyring" => r#"  # GNOME Keyring
   services.gnome.gnome-keyring.enable = true;"#,
+            "gnome_tweaks" => r#"  # GNOME Tweaks
+  environment.systemPackages = with pkgs; [ gnome-tweaks ];"#,
             "dconf" => r#"  # dconf
   programs.dconf.enable = true;"#,
             "docker" => r#"  # Docker
