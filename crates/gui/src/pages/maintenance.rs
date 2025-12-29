@@ -176,7 +176,7 @@ impl MaintenancePage {
         row
     }
 
-    fn run_action(&self, id: &str, name: &str, command: &str, warning: Option<&str>) {
+    fn run_action(&self, _id: &str, name: &str, command: &str, warning: Option<&str>) {
         let imp = self.imp();
 
         if *imp.is_running.borrow() {
