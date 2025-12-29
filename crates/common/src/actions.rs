@@ -6,6 +6,73 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// CPU architecture
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CpuArch {
+    X86_64,
+    Aarch64,
+    Unknown,
+}
+
+impl CpuArch {
+    /// Detect current CPU architecture
+    pub fn detect() -> Self {
+        #[cfg(target_arch = "x86_64")]
+        return CpuArch::X86_64;
+
+        #[cfg(target_arch = "aarch64")]
+        return CpuArch::Aarch64;
+
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        return CpuArch::Unknown;
+    }
+
+    pub fn is_arm(&self) -> bool {
+        matches!(self, CpuArch::Aarch64)
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::X86_64 => "x86_64",
+            Self::Aarch64 => "ARM64 (aarch64)",
+            Self::Unknown => "Unknown",
+        }
+    }
+}
+
+/// ARM compatibility level for bundles/profiles
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ArmCompat {
+    /// Fully compatible with ARM
+    Full,
+    /// Mostly works, some packages unavailable
+    Partial,
+    /// Very limited ARM support
+    Limited,
+    /// Not available on ARM at all
+    None,
+}
+
+impl ArmCompat {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Full => "Full ARM support",
+            Self::Partial => "Partial ARM support",
+            Self::Limited => "Limited ARM support",
+            Self::None => "x86_64 only",
+        }
+    }
+
+    pub fn icon_name(&self) -> &'static str {
+        match self {
+            Self::Full => "emblem-ok-symbolic",
+            Self::Partial => "dialog-warning-symbolic",
+            Self::Limited => "dialog-warning-symbolic",
+            Self::None => "action-unavailable-symbolic",
+        }
+    }
+}
+
 /// Unique identifier for an action
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ActionId(pub String);
@@ -124,6 +191,10 @@ pub struct ProfileDef {
     pub icon: String,
     pub template: String,
     pub display_manager: String,
+    /// ARM compatibility level
+    pub arm_compat: ArmCompat,
+    /// Note about ARM compatibility (if any)
+    pub arm_note: Option<String>,
 }
 
 /// Definition of a software bundle
@@ -136,6 +207,10 @@ pub struct BundleDef {
     pub category: ActionCategory,
     pub template: String,
     pub packages: Vec<String>,
+    /// ARM compatibility level
+    pub arm_compat: ArmCompat,
+    /// Note about what's unavailable on ARM (if any)
+    pub arm_note: Option<String>,
 }
 
 /// Get all available profile definitions
@@ -148,6 +223,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/gnome.nix".into(),
             display_manager: "gdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "kde".into(),
@@ -156,6 +233,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/kde.nix".into(),
             display_manager: "sddm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "xfce".into(),
@@ -164,6 +243,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/xfce.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "mate".into(),
@@ -172,6 +253,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/mate.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "cinnamon".into(),
@@ -180,6 +263,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/cinnamon.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "pantheon".into(),
@@ -188,6 +273,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/pantheon.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "cosmic".into(),
@@ -196,6 +283,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/cosmic.nix".into(),
             display_manager: "cosmic-greeter".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Tiling Window Managers
         ProfileDef {
@@ -205,6 +294,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/hyprland.nix".into(),
             display_manager: "sddm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "sway".into(),
@@ -213,6 +304,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/sway.nix".into(),
             display_manager: "sddm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "i3".into(),
@@ -221,6 +314,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/i3.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Additional DEs
         ProfileDef {
@@ -230,6 +325,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/budgie.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "lxqt".into(),
@@ -238,6 +335,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/lxqt.nix".into(),
             display_manager: "sddm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         ProfileDef {
             id: "enlightenment".into(),
@@ -246,6 +345,8 @@ pub fn default_profiles() -> Vec<ProfileDef> {
             icon: "desktop-symbolic".into(),
             template: "profiles/enlightenment.nix".into(),
             display_manager: "lightdm".into(),
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
     ]
 }
@@ -270,6 +371,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "python3".into(),
                 "docker".into(),
             ],
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("VSCode binary not available; use vscodium or code-oss".into()),
         },
         // Gaming
         BundleDef {
@@ -285,6 +388,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "mangohud".into(),
                 "gamemode".into(),
             ],
+            arm_compat: ArmCompat::None,
+            arm_note: Some("Steam, Lutris, Wine, and Proton are x86_64 only".into()),
         },
         // Virtualization
         BundleDef {
@@ -300,6 +405,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "OVMF".into(),
                 "spice-gtk".into(),
             ],
+            arm_compat: ArmCompat::Limited,
+            arm_note: Some("OVMF/UEFI firmware is x86_64 only; use AAVMF for ARM VMs".into()),
         },
         BundleDef {
             id: "virtualbox".into(),
@@ -311,6 +418,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "virtualbox".into(),
             ],
+            arm_compat: ArmCompat::None,
+            arm_note: Some("VirtualBox is x86_64 only".into()),
         },
         BundleDef {
             id: "containers".into(),
@@ -325,6 +434,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "buildah".into(),
                 "skopeo".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // System
         BundleDef {
@@ -337,6 +448,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
             packages: vec![
                 "flatpak".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Multimedia
         BundleDef {
@@ -354,6 +467,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "obs-studio".into(),
                 "audacity".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Office
         BundleDef {
@@ -369,6 +484,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "evince".into(),
                 "obsidian".into(),
             ],
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("Obsidian and OnlyOffice binaries not available on ARM".into()),
         },
         // Security Tools
         BundleDef {
@@ -385,6 +502,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "gnupg".into(),
                 "age".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Communication
         BundleDef {
@@ -401,6 +520,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "slack".into(),
                 "zoom-us".into(),
             ],
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("Slack and Zoom binaries are x86_64 only".into()),
         },
         // Browsers
         BundleDef {
@@ -416,6 +537,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "brave".into(),
                 "tor-browser".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Science & Math
         BundleDef {
@@ -432,6 +555,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "texlive".into(),
                 "gnuplot".into(),
             ],
+            arm_compat: ArmCompat::Partial,
+            arm_note: Some("RStudio binary not available; Julia has limited ARM support".into()),
         },
         // 3D & CAD
         BundleDef {
@@ -447,6 +572,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "openscad".into(),
                 "kicad".into(),
             ],
+            arm_compat: ArmCompat::Limited,
+            arm_note: Some("Blender and FreeCAD have limited ARM support".into()),
         },
         // System Utilities
         BundleDef {
@@ -466,6 +593,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "wget".into(),
                 "curl".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
         // Fonts
         BundleDef {
@@ -482,6 +611,8 @@ pub fn default_bundles() -> Vec<BundleDef> {
                 "inter".into(),
                 "noto-fonts".into(),
             ],
+            arm_compat: ArmCompat::Full,
+            arm_note: None,
         },
     ]
 }

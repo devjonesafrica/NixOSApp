@@ -2,6 +2,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use common::CpuArch;
 use gtk::glib;
 use std::cell::RefCell;
 
@@ -65,6 +66,7 @@ impl HardwarePage {
 
     fn setup_ui(&self) {
         let imp = self.imp();
+        let is_arm = CpuArch::detect().is_arm();
 
         // Title
         let title = gtk::Label::builder()
@@ -82,6 +84,16 @@ impl HardwarePage {
             .css_classes(["dim-label"])
             .build();
         self.append(&desc);
+
+        // ARM warning banner
+        if is_arm {
+            let arm_banner = adw::Banner::builder()
+                .title("ARM64: NVIDIA drivers and Intel Thermald are not available")
+                .revealed(true)
+                .build();
+            arm_banner.add_css_class("warning");
+            self.append(&arm_banner);
+        }
 
         // Scrollable content
         let scroll = gtk::ScrolledWindow::builder()
@@ -110,8 +122,8 @@ impl HardwarePage {
         gpu_info_row.add_prefix(&gtk::Image::from_icon_name("video-display-symbolic"));
         gpu_group.add(&gpu_info_row);
 
-        // NVIDIA-specific options
-        if detected_gpu.to_lowercase().contains("nvidia") {
+        // NVIDIA-specific options (not available on ARM)
+        if detected_gpu.to_lowercase().contains("nvidia") && !is_arm {
             // Driver selection
             let nvidia_driver = adw::ComboRow::builder()
                 .title("NVIDIA Driver")
@@ -249,8 +261,13 @@ impl HardwarePage {
 
         let thermald = adw::SwitchRow::builder()
             .title("Thermald")
-            .subtitle("Thermal management daemon for Intel CPUs")
+            .subtitle(if is_arm {
+                "Intel-only - not available on ARM"
+            } else {
+                "Thermal management daemon for Intel CPUs"
+            })
             .active(false)
+            .sensitive(!is_arm)
             .build();
         thermald.add_prefix(&gtk::Image::from_icon_name("sensors-temperature-symbolic"));
         power_group.add(&thermald);
