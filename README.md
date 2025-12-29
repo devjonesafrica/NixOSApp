@@ -365,6 +365,19 @@ BundleDef {
 
 2. **Validation hardcoding**: The helper's validation function has hardcoded profile/bundle lists that may lag behind newly added definitions. New profiles/bundles will work but may show validation warnings.
 
+## Roadmap / Next Steps
+
+- **Binary Cache (Cachix)**: Currently the app builds from source on first run. Setting up a Cachix binary cache would provide pre-built binaries for instant installation. This involves:
+  1. Creating a cache at [cachix.org](https://cachix.org)
+  2. Adding cache configuration to `flake.nix`
+  3. Setting up GitHub Actions to automatically push builds to the cache
+
+- **More Desktop Profiles**: Additional window managers and desktop environments
+
+- **Backup/Restore**: Export and import toolkit configurations
+
+- **Theme Support**: Light/dark mode preferences for generated configs
+
 ## License
 
 GPL-3.0-or-later
