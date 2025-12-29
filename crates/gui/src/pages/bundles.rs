@@ -50,11 +50,7 @@ impl BundlesPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
@@ -62,13 +58,30 @@ impl BundlesPage {
         let imp = self.imp();
         let is_arm = CpuArch::detect().is_arm();
 
+        // Wrap everything in a scrolled window
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
+
         // Title
         let title = gtk::Label::builder()
             .label("Software Bundles")
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -77,7 +90,7 @@ impl BundlesPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // ARM warning banner
         if is_arm {
@@ -86,19 +99,8 @@ impl BundlesPage {
                 .revealed(true)
                 .build();
             arm_banner.add_css_class("warning");
-            self.append(&arm_banner);
+            content.append(&arm_banner);
         }
-
-        // Scrollable content
-        let scroll = gtk::ScrolledWindow::builder()
-            .vexpand(true)
-            .vscrollbar_policy(gtk::PolicyType::Automatic)
-            .build();
-
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(12)
-            .build();
 
         // Bundles group
         let bundles_group = adw::PreferencesGroup::builder()
@@ -200,6 +202,7 @@ impl BundlesPage {
         for package in &bundle.packages {
             let pkg_row = adw::ActionRow::builder()
                 .title(package)
+                .subtitle(&format!("nixpkgs#{}", package))
                 .build();
 
             let check = gtk::CheckButton::builder()
@@ -223,7 +226,7 @@ impl BundlesPage {
                 }
             ));
 
-            pkg_row.add_suffix(&check);
+            pkg_row.add_prefix(&check);
             pkg_row.set_activatable_widget(Some(&check));
             row.add_row(&pkg_row);
         }

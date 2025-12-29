@@ -44,16 +44,29 @@ impl OnboardingPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
     fn setup_ui(&self) {
         let imp = self.imp();
+
+        // Wrap everything in a scrolled window for scrollable content
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
 
         // Title
         let title = gtk::Label::builder()
@@ -61,7 +74,7 @@ impl OnboardingPage {
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -70,7 +83,7 @@ impl OnboardingPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // Status card
         let status_group = adw::PreferencesGroup::builder()
@@ -85,7 +98,7 @@ impl OnboardingPage {
         status_group.add(&status_row);
         *imp.status_row.borrow_mut() = Some(status_row);
 
-        self.append(&status_group);
+        content.append(&status_group);
 
         // Integration instructions
         let instructions_group = adw::PreferencesGroup::builder()
@@ -95,7 +108,7 @@ impl OnboardingPage {
 
         // Code snippet view
         let snippet_scroll = gtk::ScrolledWindow::builder()
-            .height_request(320)
+            .height_request(280)
             .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
@@ -113,7 +126,7 @@ impl OnboardingPage {
         *imp.snippet_view.borrow_mut() = Some(snippet_view);
 
         instructions_group.add(&snippet_scroll);
-        self.append(&instructions_group);
+        content.append(&instructions_group);
 
         // Action buttons
         let button_box = gtk::Box::builder()
@@ -149,7 +162,10 @@ impl OnboardingPage {
         button_box.append(&copy_button);
         button_box.append(&open_folder_button);
         button_box.append(&verify_button);
-        self.append(&button_box);
+        content.append(&button_box);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
 
         // Initial update
         self.update_system_info(&SystemInfo::default());

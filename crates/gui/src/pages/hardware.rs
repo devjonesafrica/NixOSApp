@@ -56,11 +56,7 @@ impl HardwarePage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
@@ -68,13 +64,30 @@ impl HardwarePage {
         let imp = self.imp();
         let is_arm = CpuArch::detect().is_arm();
 
+        // Wrap everything in a scrolled window
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
+
         // Title
         let title = gtk::Label::builder()
             .label("Hardware Configuration")
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -83,7 +96,7 @@ impl HardwarePage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // ARM warning banner
         if is_arm {
@@ -92,19 +105,8 @@ impl HardwarePage {
                 .revealed(true)
                 .build();
             arm_banner.add_css_class("warning");
-            self.append(&arm_banner);
+            content.append(&arm_banner);
         }
-
-        // Scrollable content
-        let scroll = gtk::ScrolledWindow::builder()
-            .vexpand(true)
-            .vscrollbar_policy(gtk::PolicyType::Automatic)
-            .build();
-
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(24)
-            .build();
 
         // === GPU Configuration ===
         let gpu_group = adw::PreferencesGroup::builder()
@@ -276,16 +278,18 @@ impl HardwarePage {
 
         content.append(&power_group);
 
-        scroll.set_child(Some(&content));
-        self.append(&scroll);
-
         // Note about changes
+        let note_group = adw::PreferencesGroup::new();
         let note = adw::ActionRow::builder()
             .title("Note")
             .subtitle("Hardware changes require a system rebuild. Some changes may require a reboot.")
             .build();
         note.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
-        self.append(&note);
+        note_group.add(&note);
+        content.append(&note_group);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
     }
 
     fn detect_gpu(&self) -> String {

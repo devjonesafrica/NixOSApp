@@ -91,7 +91,7 @@ impl MainWindow {
             ("bundles", "Software Bundles", "package-x-generic-symbolic"),
             ("system", "System Settings", "preferences-system-symbolic"),
             ("hardware", "Hardware", "video-display-symbolic"),
-            ("network", "Network & Security", "network-wired-symbolic"),
+            ("network", "Network", "network-workgroup-symbolic"),
             ("services", "Services", "system-run-symbolic"),
             ("generations", "Generations", "document-open-recent-symbolic"),
             ("maintenance", "Maintenance", "user-trash-symbolic"),
@@ -174,7 +174,6 @@ impl MainWindow {
         content_toolbar.set_content(Some(&imp.content_stack));
 
         let content_page = adw::NavigationPage::builder()
-            .title("Content")
             .child(&content_toolbar)
             .build();
 

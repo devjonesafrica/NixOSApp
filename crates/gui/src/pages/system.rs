@@ -46,16 +46,29 @@ impl SystemPage {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 24)
-            .property("margin-start", 24)
-            .property("margin-end", 24)
-            .property("margin-top", 24)
-            .property("margin-bottom", 24)
+            .property("spacing", 0)
             .build()
     }
 
     fn setup_ui(&self) {
         let imp = self.imp();
+
+        // Wrap everything in a scrolled window
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(24)
+            .margin_start(24)
+            .margin_end(24)
+            .margin_top(24)
+            .margin_bottom(24)
+            .build();
 
         // Title
         let title = gtk::Label::builder()
@@ -63,7 +76,7 @@ impl SystemPage {
             .css_classes(["title-1"])
             .halign(gtk::Align::Start)
             .build();
-        self.append(&title);
+        content.append(&title);
 
         // Description
         let desc = gtk::Label::builder()
@@ -72,7 +85,7 @@ impl SystemPage {
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
             .build();
-        self.append(&desc);
+        content.append(&desc);
 
         // Hostname group
         let hostname_group = adw::PreferencesGroup::builder()
@@ -104,7 +117,7 @@ impl SystemPage {
         hostname_group.add(&hostname_entry);
         *imp.hostname_entry.borrow_mut() = Some(hostname_entry);
 
-        self.append(&hostname_group);
+        content.append(&hostname_group);
 
         // Info banner about hostname changes
         let info_row = adw::ActionRow::builder()
@@ -143,7 +156,7 @@ impl SystemPage {
         dns_group.add(&dns_help);
         *imp.dns_entry.borrow_mut() = Some(dns_entry);
 
-        self.append(&dns_group);
+        content.append(&dns_group);
 
         // User Groups section
         let groups_group = adw::PreferencesGroup::builder()
@@ -189,8 +202,6 @@ impl SystemPage {
             }
         }
 
-        self.append(&groups_group);
-
         // Info banner about group changes
         let group_info = adw::ActionRow::builder()
             .title("Note")
@@ -198,6 +209,11 @@ impl SystemPage {
             .build();
         group_info.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
         groups_group.add(&group_info);
+
+        content.append(&groups_group);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
     }
 
     fn set_hostname(&self, hostname: &str) {
