@@ -3,6 +3,7 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use common::actions::{default_bundles, BundleDef};
+use common::{ArmCompat, CpuArch};
 use gtk::glib;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -53,6 +54,7 @@ impl BundlesPage {
 
     fn setup_ui(&self) {
         let imp = self.imp();
+        let is_arm = CpuArch::detect().is_arm();
 
         // Title
         let title = gtk::Label::builder()
@@ -71,6 +73,16 @@ impl BundlesPage {
             .build();
         self.append(&desc);
 
+        // ARM warning banner
+        if is_arm {
+            let arm_banner = adw::Banner::builder()
+                .title("Running on ARM64 - some packages may not be available")
+                .revealed(true)
+                .build();
+            arm_banner.add_css_class("warning");
+            self.append(&arm_banner);
+        }
+
         // Bundles group
         let bundles_group = adw::PreferencesGroup::builder()
             .title("Available Bundles")
@@ -81,7 +93,7 @@ impl BundlesPage {
         let mut bundle_rows = Vec::new();
 
         for bundle in &bundles {
-            let (row, switch) = self.create_bundle_row(bundle);
+            let (row, switch) = self.create_bundle_row(bundle, is_arm);
             bundles_group.add(&row);
             bundle_rows.push((bundle.id.clone(), row, switch));
         }
@@ -114,14 +126,36 @@ impl BundlesPage {
         self.append(&summary_group);
     }
 
-    fn create_bundle_row(&self, bundle: &BundleDef) -> (adw::ActionRow, gtk::Switch) {
+    fn create_bundle_row(&self, bundle: &BundleDef, is_arm: bool) -> (adw::ActionRow, gtk::Switch) {
+        // Build subtitle with ARM warning if needed
+        let subtitle = if is_arm && bundle.arm_compat != ArmCompat::Full {
+            if let Some(ref note) = bundle.arm_note {
+                format!("{}\n⚠️ {}", bundle.description, note)
+            } else {
+                format!("{}\n⚠️ {}", bundle.description, bundle.arm_compat.display_name())
+            }
+        } else {
+            bundle.description.clone()
+        };
+
         let row = adw::ActionRow::builder()
             .title(&bundle.name)
-            .subtitle(&bundle.description)
+            .subtitle(&subtitle)
             .build();
 
         // Add icon
         row.add_prefix(&gtk::Image::from_icon_name(&bundle.icon));
+
+        // Add ARM compatibility indicator for ARM systems
+        if is_arm && bundle.arm_compat != ArmCompat::Full {
+            let compat_icon = match bundle.arm_compat {
+                ArmCompat::None => gtk::Image::from_icon_name("action-unavailable-symbolic"),
+                ArmCompat::Limited | ArmCompat::Partial => gtk::Image::from_icon_name("dialog-warning-symbolic"),
+                ArmCompat::Full => gtk::Image::from_icon_name("emblem-ok-symbolic"),
+            };
+            compat_icon.add_css_class("warning");
+            row.add_prefix(&compat_icon);
+        }
 
         // Add package count
         let count_label = gtk::Label::builder()
@@ -130,9 +164,10 @@ impl BundlesPage {
             .build();
         row.add_suffix(&count_label);
 
-        // Add switch
+        // Add switch (disabled for ARM-incompatible bundles on ARM)
         let switch = gtk::Switch::builder()
             .valign(gtk::Align::Center)
+            .sensitive(!(is_arm && bundle.arm_compat == ArmCompat::None))
             .build();
         row.add_suffix(&switch);
 

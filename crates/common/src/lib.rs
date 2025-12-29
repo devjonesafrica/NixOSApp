@@ -12,8 +12,8 @@ pub mod ipc;
 pub mod nix;
 
 pub use actions::{
-    ActionCategory, ActionConfig, ActionId, ActionMetadata, BundleDef, MaintenanceActionDef,
-    ProfileDef, SystemActionDef, SystemActionType,
+    ActionCategory, ActionConfig, ActionId, ActionMetadata, ArmCompat, BundleDef, CpuArch,
+    MaintenanceActionDef, ProfileDef, SystemActionDef, SystemActionType,
 };
 pub use config::{ConfigMode, IntegrationStatus, SystemInfo};
 pub use ipc::{HelperRequest, HelperResponse, LogLevel, RebuildType};
