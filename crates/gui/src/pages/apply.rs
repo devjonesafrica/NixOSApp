@@ -255,26 +255,153 @@ impl ApplyPage {
             view.buffer().set_text("Starting nixos-rebuild switch...\n\n");
         }
 
-        // TODO: Implement actual helper invocation
-        // For now, just show a message
-        self.append_log("Note: Full apply functionality requires the helper binary.\n");
-        self.append_log("To apply changes manually:\n");
-        self.append_log("1. Review the generated files in /etc/nixos/nixos-toolkit/\n");
-        self.append_log("2. Run: sudo nixos-rebuild switch\n");
+        // Get current state from main window
+        let (selected_profile, enabled_bundles, hostname) = if let Some(window) = self
+            .root()
+            .and_then(|r| r.downcast::<crate::window::MainWindow>().ok())
+        {
+            let state = window.get_app_state();
+            (
+                state.selected_profile.clone(),
+                state.enabled_bundles.clone(),
+                state.hostname.clone(),
+            )
+        } else {
+            self.append_log("Error: Could not get application state\n");
+            self.finish_apply(false);
+            return;
+        };
 
-        // Re-enable button after simulated delay
-        glib::timeout_add_local_once(
-            std::time::Duration::from_secs(2),
-            glib::clone!(@weak self as page => move || {
-                let imp = page.imp();
-                *imp.is_applying.borrow_mut() = false;
-                if let Some(ref button) = *imp.apply_button.borrow() {
-                    button.set_sensitive(true);
-                    button.set_label("Apply Changes");
+        self.append_log(&format!(
+            "Profile: {}\n",
+            selected_profile.as_deref().unwrap_or("None")
+        ));
+        self.append_log(&format!("Bundles: {:?}\n", enabled_bundles));
+        self.append_log(&format!(
+            "Hostname: {}\n\n",
+            hostname.as_deref().unwrap_or("(unchanged)")
+        ));
+
+        // Spawn helper with pkexec
+        self.append_log("Launching privileged helper (you may be prompted for your password)...\n");
+
+        let helper_result = HelperClient::spawn_privileged();
+
+        match helper_result {
+            Ok(mut client) => {
+                // First ensure directories exist
+                self.append_log("Ensuring directories exist...\n");
+                if let Err(e) = client.send(&HelperRequest::EnsureDirectories) {
+                    self.append_log(&format!("Error sending EnsureDirectories: {}\n", e));
+                    self.finish_apply(false);
+                    return;
                 }
-                page.append_log("\nReady.\n");
-            }),
-        );
+
+                // Wait for response
+                match client.recv_timeout(std::time::Duration::from_secs(10)) {
+                    Some(HelperResponse::Ok) => {
+                        self.append_log("Directories ready.\n");
+                    }
+                    Some(HelperResponse::Error { message, details }) => {
+                        self.append_log(&format!("Error: {}\n", message));
+                        if let Some(d) = details {
+                            self.append_log(&format!("Details: {}\n", d));
+                        }
+                        self.finish_apply(false);
+                        return;
+                    }
+                    _ => {
+                        self.append_log("Unexpected response from helper\n");
+                        self.finish_apply(false);
+                        return;
+                    }
+                }
+
+                // Send Apply request
+                self.append_log("Generating configuration and running nixos-rebuild switch...\n\n");
+                let request = HelperRequest::Apply {
+                    selected_profile,
+                    enabled_bundles,
+                    hostname,
+                    rebuild_type: RebuildType::Switch,
+                };
+
+                if let Err(e) = client.send(&request) {
+                    self.append_log(&format!("Error sending Apply request: {}\n", e));
+                    self.finish_apply(false);
+                    return;
+                }
+
+                // Poll for responses using glib timeout
+                let client = Rc::new(RefCell::new(Some(client)));
+                let page = self.downgrade();
+
+                glib::timeout_add_local(
+                    std::time::Duration::from_millis(100),
+                    move || {
+                        let Some(page) = page.upgrade() else {
+                            return glib::ControlFlow::Break;
+                        };
+
+                        let mut client_ref = client.borrow_mut();
+                        let Some(ref mut client) = *client_ref else {
+                            return glib::ControlFlow::Break;
+                        };
+
+                        // Try to receive responses
+                        while let Some(response) = client.try_recv() {
+                            match response {
+                                HelperResponse::Log { level, message } => {
+                                    page.append_log(&format!("[{}] {}\n", level.as_str(), message));
+                                }
+                                HelperResponse::ApplyComplete { success, message } => {
+                                    page.append_log(&format!("\n{}\n", message));
+                                    page.finish_apply(success);
+                                    *client_ref = None;
+                                    return glib::ControlFlow::Break;
+                                }
+                                HelperResponse::Error { message, details } => {
+                                    page.append_log(&format!("\nError: {}\n", message));
+                                    if let Some(d) = details {
+                                        page.append_log(&format!("Details: {}\n", d));
+                                    }
+                                    page.finish_apply(false);
+                                    *client_ref = None;
+                                    return glib::ControlFlow::Break;
+                                }
+                                _ => {
+                                    tracing::debug!("Unexpected response: {:?}", response);
+                                }
+                            }
+                        }
+
+                        glib::ControlFlow::Continue
+                    },
+                );
+            }
+            Err(e) => {
+                self.append_log(&format!("Failed to start helper: {}\n", e));
+                self.append_log("\nTo apply changes manually:\n");
+                self.append_log("1. Run: sudo nixos-rebuild switch\n");
+                self.finish_apply(false);
+            }
+        }
+    }
+
+    fn finish_apply(&self, success: bool) {
+        let imp = self.imp();
+        *imp.is_applying.borrow_mut() = false;
+
+        if let Some(ref button) = *imp.apply_button.borrow() {
+            button.set_sensitive(true);
+            button.set_label("Apply Changes");
+        }
+
+        if success {
+            self.append_log("\n✓ Configuration applied successfully!\n");
+        } else {
+            self.append_log("\n✗ Apply failed. Check the log above for details.\n");
+        }
     }
 
     fn do_dry_run(&self) {
