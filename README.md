@@ -6,43 +6,94 @@ A GTK4/libadwaita GUI application for declarative NixOS system management.
 
 ### Desktop Environment Profiles
 
-Choose from 7 desktop environments:
+Choose from 13 desktop environments and window managers:
 
 | Profile | Display Manager | Session Type | Notes |
 |---------|-----------------|--------------|-------|
 | GNOME | GDM | Wayland | Modern, elegant desktop with GNOME Tweaks, Extension Manager |
-| KDE Plasma 6 | SDDM | Wayland | Feature-rich, highly customizable with KDE Connect |
+| KDE Plasma | SDDM | Wayland | Feature-rich, highly customizable with KDE Connect |
 | COSMIC | cosmic-greeter | Wayland | System76's Rust-based desktop (requires NixOS with COSMIC support) |
 | XFCE | LightDM | X11 | Lightweight and fast with Whisker menu, plugins |
 | MATE | LightDM | X11 | Traditional GNOME 2 experience |
 | Cinnamon | LightDM | X11 | Modern traditional desktop from Linux Mint |
 | Pantheon | LightDM | X11 | Desktop from elementary OS with elementary apps |
+| Hyprland | SDDM | Wayland | Dynamic tiling compositor with smooth animations |
+| Sway | SDDM | Wayland | i3-compatible tiling Wayland compositor |
+| i3 | LightDM | X11 | Popular tiling window manager, highly configurable |
+| Budgie | LightDM | X11 | Modern desktop focusing on simplicity and elegance |
+| LXQt | SDDM | X11 | Lightweight Qt-based desktop environment |
+| Enlightenment | LightDM | X11 | Unique, visually stunning desktop with compositing effects |
 
 ### Software Bundles
 
-Enable curated software collections. Each bundle includes more than listed here - see full details below.
+Enable curated software collections (15 bundles):
 
-| Bundle | Key Components | Also Enables |
-|--------|---------------|--------------|
-| Development Tools | Git, Neovim, VS Code, Rust, Node.js, Python, Go | Docker service, GitHub CLI, ripgrep, fd |
-| Gaming | Steam, Lutris, MangoHud, Gamemode | Heroic launcher, Wine, Proton tools, 32-bit graphics |
-| Virtualization (KVM) | virt-manager, QEMU, libvirt | OVMF (UEFI), SPICE, TPM emulation, Windows VirtIO drivers |
-| VirtualBox | Oracle VirtualBox | Extension Pack (non-free), guest additions, sets `allowUnfree` |
-| Containers | Podman, docker-compose, buildah, skopeo | Uses Podman with Docker compatibility alias |
-| Flatpak | Flatpak, gnome-software | XDG portals |
-| Multimedia | VLC, mpv, GIMP, Inkscape, OBS Studio | PipeWire audio, Krita, GStreamer codecs |
-| Office | LibreOffice, Thunderbird, Obsidian | OnlyOffice, printing/scanning support, PDF tools |
+| Bundle | Category | Key Components |
+|--------|----------|----------------|
+| Development Tools | Development | Git, Neovim, VS Code, Rust, Node.js, Python, Go, Docker, ripgrep, fd |
+| Gaming | Gaming | Steam, Lutris, MangoHud, Gamemode, Heroic launcher, Wine, Proton tools |
+| KVM/QEMU Virtualization | Virtualization | virt-manager, QEMU, libvirt, OVMF (UEFI), SPICE, TPM emulation |
+| VirtualBox | Virtualization | Oracle VirtualBox, Extension Pack (non-free), sets `allowUnfree` |
+| Container Runtime | Virtualization | Podman, docker-compose, buildah, skopeo (Docker compatibility) |
+| Flatpak Support | System | Flatpak, gnome-software, XDG portals |
+| Multimedia | Multimedia | VLC, mpv, GIMP, Inkscape, OBS Studio, Krita, PipeWire, GStreamer |
+| Office & Productivity | Office | LibreOffice, Thunderbird, Obsidian, OnlyOffice, printing/scanning |
+| Security Tools | Security | KeePassXC, Bitwarden, VeraCrypt, GnuPG, age, Wireshark, nmap |
+| Communication | Network | Discord, Signal, Element, Slack, Zoom |
+| Web Browsers | Network | Firefox, Chromium, Brave, Tor Browser |
+| Science & Math | Development | Octave, Julia, R, TeXLive, gnuplot |
+| 3D & CAD | Multimedia | Blender, FreeCAD, OpenSCAD, KiCad |
+| System Utilities | System | htop, btop, neofetch, tmux, tree, wget, curl |
+| Fonts Collection | System | Nerd Fonts, Fira Code, JetBrains Mono, Inter, Noto |
+
+### Hardware Configuration
+
+Configure hardware settings through the GUI:
+
+- **GPU Detection**: Auto-detects NVIDIA, AMD, or Intel graphics
+- **NVIDIA Configuration**: Driver selection (stable/beta/open/nouveau), modesetting, power management, open kernel modules
+- **Audio**: PipeWire or PulseAudio selection, low-latency audio option
+- **Bluetooth**: Enable/disable, power-on-boot settings
+- **Power Management**: TLP for laptops, Thermald for Intel CPUs
+
+### Network & Security
+
+Configure network and security settings:
+
+- **Firewall**: Enable/disable, preset ports (SSH, HTTP, HTTPS), custom TCP/UDP ports
+- **SSH Server**: Enable, port configuration, password auth, root login policy, Fail2Ban
+- **VPN**: Tailscale integration, WireGuard (manual)
+
+### System Services
+
+Toggle 19 common NixOS services:
+
+| Category | Services |
+|----------|----------|
+| Hardware | Printing (CUPS), Avahi/mDNS, Firmware Updates (fwupd), UPower |
+| Network | NetworkManager, systemd-resolved |
+| Sync & Backup | Syncthing, Locate Database (plocate) |
+| Desktop | Flatpak, GNOME Keyring, dconf |
+| Development | Docker, libvirtd, PostgreSQL, Redis |
+| System | Early OOM, Auto Upgrade, Auto GC, Store Optimization |
 
 ### System Configuration
 
 - **Hostname**: Change the system hostname
-- **Custom DNS**: Set a custom DNS resolver
+- **Custom DNS**: Set custom DNS resolvers (e.g., 1.1.1.1, 8.8.8.8)
 - **User Groups**: Add users to libvirtd, docker, or vboxusers groups
+
+### Generation Management
+
+- **List Generations**: View all NixOS system generations with dates
+- **Rollback**: Switch to previous or specific generations
+- **Delete Generations**: Remove old generations to free space
+- **Boot Options**: Set generation for next boot or switch immediately
 
 ### Maintenance Tools
 
 - Garbage collection (unreachable objects)
-- Delete old generations
+- Delete old generations (keeps current only)
 - Optimize Nix store (deduplication)
 - Verify store integrity
 - Update channels
@@ -54,15 +105,46 @@ Enable curated software collections. Each bundle includes more than listed here 
 - **Declarative**: All changes integrate with NixOS's generation system for easy rollback
 - **Privilege Separation**: GUI runs unprivileged; privileged operations use pkexec
 
-## Quick Start
+## Installation
 
-### Run without installing
+### Easy Install (Recommended)
+
+Run the installer script to set up aliases and desktop entry:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/devjonesafrica/NixOSApp/main/install.sh | bash
+```
+
+This will:
+- Check if flakes are enabled
+- Create a shell alias `nixos-toolkit`
+- Optionally create a desktop entry for your application menu
+
+### Quick Run
+
+If you have flakes enabled:
 
 ```bash
 nix run github:devjonesafrica/NixOSApp
 ```
 
-### Install to your profile
+If flakes are NOT enabled (longer command):
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' run github:devjonesafrica/NixOSApp
+```
+
+### Enable Flakes (Recommended)
+
+Add this to your `/etc/nixos/configuration.nix` to enable flakes permanently:
+
+```nix
+nix.settings.experimental-features = [ "nix-command" "flakes" ];
+```
+
+Then run `sudo nixos-rebuild switch` and you can use the shorter commands.
+
+### Install to Profile
 
 ```bash
 nix profile install github:devjonesafrica/NixOSApp
@@ -159,26 +241,36 @@ nix build .#helper
 ├── crates/
 │   ├── common/             # Shared types and utilities
 │   │   └── src/
-│   │       ├── actions.rs  # Action registry (7 profiles, 8 bundles, 5 system actions, 5 maintenance actions)
+│   │       ├── actions.rs  # Action registry (13 profiles, 15 bundles, 5 system actions, 5 maintenance actions)
 │   │       ├── ipc.rs      # IPC message types (JSON over stdin/stdout)
 │   │       ├── config.rs   # System configuration types and paths
-│   │       └── nix.rs      # Nix code generation
+│   │       └── nix.rs      # Nix code generation (selected, hostname, DNS, users, firewall, SSH, hardware, services)
 │   ├── gui/                # GTK4/libadwaita GUI application
 │   │   └── src/
 │   │       ├── app.rs      # Application setup
 │   │       ├── window.rs   # Main window with sidebar navigation
-│   │       ├── pages/      # UI pages (Onboarding, Profiles, Bundles, System, Maintenance, Apply)
-│   │       └── helper/     # Helper process communication via pkexec
+│   │       ├── state.rs    # Application state management
+│   │       └── pages/      # UI pages:
+│   │           ├── onboarding.rs   # First-run setup
+│   │           ├── profiles.rs     # Desktop environment selection
+│   │           ├── bundles.rs      # Software bundle toggles
+│   │           ├── system.rs       # Hostname, DNS, user groups
+│   │           ├── hardware.rs     # GPU, audio, bluetooth, power
+│   │           ├── network.rs      # Firewall, SSH, VPN
+│   │           ├── services.rs     # System service toggles
+│   │           ├── generations.rs  # Generation management
+│   │           ├── maintenance.rs  # Maintenance actions
+│   │           └── apply.rs        # Preview and apply changes
 │   └── helper/             # Privileged helper binary
 │       └── src/
-│           ├── commands.rs # Command handlers
+│           ├── main.rs     # JSON IPC server over stdin/stdout
+│           ├── commands.rs # Request handlers (12 commands)
 │           ├── nix_gen.rs  # Nix file generation with fallback templates
 │           └── rebuild.rs  # nixos-rebuild execution
 ├── nix/
 │   └── templates/          # Nix module templates
-│       ├── profiles/       # 7 desktop environment profiles
-│       ├── bundles/        # 8 software bundles
-│       └── state/          # State file templates
+│       ├── profiles/       # 13 desktop environment profiles
+│       └── bundles/        # 15 software bundles
 └── data/
     ├── nixos-toolkit.desktop  # Desktop entry
     ├── icons/                 # Application icon (SVG)
@@ -203,6 +295,24 @@ nix build .#helper
                                                 │  bundles/*.nix      │
                                                 └─────────────────────┘
 ```
+
+### IPC Protocol
+
+The helper binary accepts JSON requests over stdin and responds on stdout:
+
+| Request | Description |
+|---------|-------------|
+| `CheckPermissions` | Verify read/write/rebuild capabilities |
+| `GetSystemInfo` | Detect NixOS version, config mode, integration status |
+| `Validate` | Validate configuration before applying |
+| `Generate` | Generate Nix files (supports dry-run) |
+| `Apply` | Generate files and run nixos-rebuild |
+| `EnsureDirectories` | Create managed directory structure |
+| `ReadState` / `WriteState` | Persist/restore application state |
+| `ListGenerations` | List all NixOS system generations |
+| `RollbackGeneration` | Switch to a specific generation |
+| `DeleteGenerations` | Remove specific generations |
+| `RunMaintenance` | Execute allowed maintenance commands |
 
 ## Adding New Profiles/Bundles
 
@@ -247,39 +357,13 @@ BundleDef {
 - The toolkit NEVER modifies your existing configuration.nix or flake.nix
 - All managed files are in `/etc/nixos/nixos-toolkit/` and marked as auto-generated
 - Changes integrate with NixOS generations for rollback capability
-
-## Roadmap
-
-### Completed
-
-- [x] Onboarding with integration detection
-- [x] 7 Desktop profiles (GNOME, KDE Plasma 6, COSMIC, XFCE, MATE, Cinnamon, Pantheon)
-- [x] 8 Software bundles (DevTools, Gaming, KVM, VirtualBox, Containers, Flatpak, Multimedia, Office)
-- [x] Wayland-first configuration for GNOME, KDE, COSMIC
-- [x] Hostname configuration
-- [x] Configuration preview
-- [x] Helper binary for privileged operations via pkexec
-
-### Partially Implemented
-
-- [ ] Custom DNS configuration (UI exists, Nix generation unclear)
-- [ ] User group management (UI exists, Nix generation unclear)
-- [ ] Maintenance tools (UI exists, execution mechanism unclear)
-
-### Planned
-
-- [ ] Full polkit integration (D-Bus service instead of pkexec)
-- [ ] More profiles (Hyprland, Sway, i3, Budgie, LXQt)
-- [ ] Home-manager integration
-- [ ] Generation history and rollback UI
-- [ ] Theme/appearance settings
-- [ ] Network/firewall configuration
-- [ ] Service toggles (SSH, printing, etc.)
-- [ ] Package search and management
+- Maintenance commands are allowlisted (only specific nix commands permitted)
 
 ## Known Issues
 
 1. **Channel updates on flakes**: The "Update Channels" maintenance action uses `nix-channel --update` which may not be relevant for flake-based configurations.
+
+2. **Validation hardcoding**: The helper's validation function has hardcoded profile/bundle lists that may lag behind newly added definitions. New profiles/bundles will work but may show validation warnings.
 
 ## License
 
