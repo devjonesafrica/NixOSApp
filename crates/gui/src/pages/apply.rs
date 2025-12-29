@@ -263,7 +263,7 @@ impl ApplyPage {
             let state = window.get_app_state();
             (
                 state.selected_profile.clone(),
-                state.enabled_bundles.clone(),
+                state.enabled_bundles.iter().cloned().collect::<Vec<_>>(),
                 state.hostname.clone(),
             )
         } else {
