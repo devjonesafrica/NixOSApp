@@ -250,7 +250,7 @@ pub fn apply(
     rebuild::run_rebuild(rebuild_type, config_mode)
 }
 
-/// Ensure required directories exist
+/// Ensure required directories exist and create placeholder files
 pub fn ensure_directories() -> HelperResponse {
     let dirs = [
         paths::MANAGED_DIR,
@@ -266,6 +266,33 @@ pub fn ensure_directories() -> HelperResponse {
                 details: Some(e.to_string()),
             };
         }
+    }
+
+    // Create placeholder selected.nix if it doesn't exist
+    // This allows users to add the import to configuration.nix before making selections
+    if !Path::new(paths::SELECTED_NIX).exists() {
+        let placeholder = r#"# NixOS Toolkit - Managed Configuration
+# This file is managed by nixos-toolkit.
+#
+# No profiles or bundles have been selected yet.
+# Use the NixOS Toolkit app to select a desktop profile and bundles,
+# then click "Apply" to generate your configuration.
+
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [
+    # Profiles and bundles will be added here when you apply changes
+  ];
+}
+"#;
+        if let Err(e) = fs::write(paths::SELECTED_NIX, placeholder) {
+            return HelperResponse::Error {
+                message: "Failed to create placeholder selected.nix".into(),
+                details: Some(e.to_string()),
+            };
+        }
+        tracing::info!("Created placeholder {}", paths::SELECTED_NIX);
     }
 
     HelperResponse::Ok
