@@ -8,21 +8,15 @@ echo "==================================="
 echo "  NixOS Toolkit Installer"
 echo "==================================="
 
-# Check flakes
-if nix flake --version >/dev/null 2>&1; then
-    echo ""
-    echo "Flakes enabled! Run with:"
-    echo "  nix run $REPO"
-    CMD="nix run $REPO"
-else
-    echo ""
-    echo "Flakes not enabled. Run with:"
-    echo "  nix --extra-experimental-features 'nix-command flakes' run $REPO"
-    echo ""
-    echo "Or enable flakes permanently in /etc/nixos/configuration.nix:"
-    echo "  nix.settings.experimental-features = [ \"nix-command\" \"flakes\" ];"
-    CMD="nix --extra-experimental-features 'nix-command flakes' run $REPO"
-fi
+# Always use experimental features flag (works whether flakes enabled or not)
+CMD="nix --extra-experimental-features 'nix-command flakes' run $REPO"
+
+echo ""
+echo "To enable flakes permanently, add to /etc/nixos/configuration.nix:"
+echo "  nix.settings.experimental-features = [ \"nix-command\" \"flakes\" ];"
+echo ""
+echo "Run the app with:"
+echo "  $CMD"
 
 echo ""
 echo "-----------------------------------"
@@ -36,14 +30,16 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         RC="$HOME/.bashrc"
     fi
 
-    if ! grep -q "alias nixos-toolkit=" "$RC" 2>/dev/null; then
-        echo "" >> "$RC"
-        echo "# NixOS Toolkit" >> "$RC"
-        echo "alias nixos-toolkit='$CMD'" >> "$RC"
-        echo "Added to $RC - restart terminal or run: source $RC"
-    else
-        echo "Alias already exists"
+    # Remove old alias if exists, then add new one
+    if grep -q "alias nixos-toolkit=" "$RC" 2>/dev/null; then
+        sed -i '/alias nixos-toolkit=/d' "$RC"
+        echo "Updated existing alias in $RC"
     fi
+
+    echo "" >> "$RC"
+    echo "# NixOS Toolkit" >> "$RC"
+    echo "alias nixos-toolkit='$CMD'" >> "$RC"
+    echo "Added to $RC - restart terminal or run: source $RC"
 fi
 
 echo ""
