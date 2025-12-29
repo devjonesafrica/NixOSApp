@@ -214,11 +214,19 @@ impl OnboardingPage {
                 let clipboard = display.clipboard();
                 clipboard.set_text(&text);
 
-                // Show toast
+                // Show toast notification
                 if let Some(window) = self.root().and_then(|r| r.downcast::<adw::ApplicationWindow>().ok()) {
                     let toast = adw::Toast::new("Snippet copied to clipboard");
-                    if let Some(overlay) = window.content().and_then(|c| c.first_child()) {
-                        // Try to find toast overlay
+                    // Try to find toast overlay and add the toast
+                    if let Some(content) = window.content() {
+                        if let Some(overlay) = content.downcast_ref::<adw::ToastOverlay>() {
+                            overlay.add_toast(toast);
+                        } else {
+                            tracing::info!("Copied snippet to clipboard (no toast overlay)");
+                        }
+                    } else {
+                        // Fallback: just log
+                        let _ = toast; // silence unused warning
                         tracing::info!("Copied snippet to clipboard");
                     }
                 }
