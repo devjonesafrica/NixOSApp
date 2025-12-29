@@ -392,6 +392,9 @@ pub fn generate_services_nix(services: &[&str]) -> String {
   networking.networkmanager.enable = true;"#,
             "resolved" => r#"  # systemd-resolved
   services.resolved.enable = true;"#,
+            "rustdesk" => r#"  # RustDesk Remote Desktop
+  services.rustdesk-server.enable = true;
+  environment.systemPackages = with pkgs; [ rustdesk ];"#,
             "syncthing" => r#"  # Syncthing
   services.syncthing.enable = true;"#,
             "locate" => r#"  # Locate Database
