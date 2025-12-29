@@ -3,9 +3,13 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use common::actions::{default_bundles, default_profiles};
+use common::ipc::{HelperRequest, HelperResponse, RebuildType};
 use common::nix::generate_preview;
 use gtk::glib;
 use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::helper::HelperClient;
 
 mod imp {
     use super::*;
