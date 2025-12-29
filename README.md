@@ -131,7 +131,7 @@ nix run github:devjonesafrica/NixOSApp
 If flakes are NOT enabled (longer command):
 
 ```bash
-nix --extra-experimental-features 'nix-command flakes' run github:devjonesafrica/NixOSApp
+nix --extra-experimental-features 'nix-command flakes' run github:devjonesafrica/NixOSApp --no-write-lock-file
 ```
 
 ### Enable Flakes (Recommended)
