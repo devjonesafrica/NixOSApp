@@ -1,4 +1,4 @@
-//! Bundle selection page
+//! Bundle selection page with expandable package customization
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -6,15 +6,21 @@ use common::actions::{default_bundles, BundleDef};
 use common::{ArmCompat, CpuArch};
 use gtk::glib;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 mod imp {
     use super::*;
 
     #[derive(Debug, Default)]
     pub struct BundlesPage {
-        pub enabled_bundles: RefCell<HashSet<String>>,
-        pub bundle_rows: RefCell<Vec<(String, adw::ActionRow, gtk::Switch)>>,
+        /// Tracks which packages are enabled per bundle: bundle_id -> set of enabled packages
+        pub enabled_packages: RefCell<HashMap<String, HashSet<String>>>,
+        /// References to bundle expander rows
+        pub bundle_rows: RefCell<Vec<(String, adw::ExpanderRow)>>,
+        /// References to package check buttons: (bundle_id, package_name) -> CheckButton
+        pub package_checks: RefCell<HashMap<(String, String), gtk::CheckButton>>,
+        /// Summary label reference
+        pub summary_label: RefCell<Option<gtk::Label>>,
     }
 
     #[glib::object_subclass]
@@ -66,7 +72,7 @@ impl BundlesPage {
 
         // Description
         let desc = gtk::Label::builder()
-            .label("Enable software bundles to install curated collections of applications.")
+            .label("Enable bundles and expand to customize individual packages.")
             .wrap(true)
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
@@ -83,9 +89,21 @@ impl BundlesPage {
             self.append(&arm_banner);
         }
 
+        // Scrollable content
+        let scroll = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .build();
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(12)
+            .build();
+
         // Bundles group
         let bundles_group = adw::PreferencesGroup::builder()
             .title("Available Bundles")
+            .description("Click to expand and customize packages")
             .build();
 
         // Add bundle rows
@@ -93,13 +111,13 @@ impl BundlesPage {
         let mut bundle_rows = Vec::new();
 
         for bundle in &bundles {
-            let (row, switch) = self.create_bundle_row(bundle, is_arm);
+            let row = self.create_bundle_row(bundle, is_arm);
             bundles_group.add(&row);
-            bundle_rows.push((bundle.id.clone(), row, switch));
+            bundle_rows.push((bundle.id.clone(), row));
         }
 
         *imp.bundle_rows.borrow_mut() = bundle_rows;
-        self.append(&bundles_group);
+        content.append(&bundles_group);
 
         // Summary section
         let summary_group = adw::PreferencesGroup::builder()
@@ -108,7 +126,7 @@ impl BundlesPage {
             .build();
 
         let summary_label = gtk::Label::builder()
-            .label("No bundles selected")
+            .label("No packages selected")
             .wrap(true)
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
@@ -118,29 +136,38 @@ impl BundlesPage {
             .margin_end(12)
             .build();
 
+        *imp.summary_label.borrow_mut() = Some(summary_label.clone());
+
         let summary_frame = gtk::Frame::new(None);
         summary_frame.set_child(Some(&summary_label));
         summary_frame.add_css_class("card");
 
         summary_group.add(&summary_frame);
-        self.append(&summary_group);
+        content.append(&summary_group);
+
+        scroll.set_child(Some(&content));
+        self.append(&scroll);
     }
 
-    fn create_bundle_row(&self, bundle: &BundleDef, is_arm: bool) -> (adw::ActionRow, gtk::Switch) {
+    fn create_bundle_row(&self, bundle: &BundleDef, is_arm: bool) -> adw::ExpanderRow {
+        let imp = self.imp();
+
         // Build subtitle with ARM warning if needed
         let subtitle = if is_arm && bundle.arm_compat != ArmCompat::Full {
             if let Some(ref note) = bundle.arm_note {
-                format!("{}\n⚠️ {}", bundle.description, note)
+                format!("{} | ⚠️ {}", bundle.description, note)
             } else {
-                format!("{}\n⚠️ {}", bundle.description, bundle.arm_compat.display_name())
+                format!("{} | ⚠️ {}", bundle.description, bundle.arm_compat.display_name())
             }
         } else {
             bundle.description.clone()
         };
 
-        let row = adw::ActionRow::builder()
+        let row = adw::ExpanderRow::builder()
             .title(&bundle.name)
             .subtitle(&subtitle)
+            .show_enable_switch(true)
+            .enable_expansion(false)
             .build();
 
         // Add icon
@@ -157,40 +184,82 @@ impl BundlesPage {
             row.add_prefix(&compat_icon);
         }
 
-        // Add package count
+        // Add package count suffix
         let count_label = gtk::Label::builder()
             .label(&format!("{} packages", bundle.packages.len()))
             .css_classes(["dim-label"])
             .build();
         row.add_suffix(&count_label);
 
-        // Add switch (disabled for ARM-incompatible bundles on ARM)
-        let switch = gtk::Switch::builder()
-            .valign(gtk::Align::Center)
-            .sensitive(!(is_arm && bundle.arm_compat == ArmCompat::None))
-            .build();
-        row.add_suffix(&switch);
+        // Disable for ARM-incompatible bundles
+        if is_arm && bundle.arm_compat == ArmCompat::None {
+            row.set_sensitive(false);
+        }
 
-        // Store bundle ID and connect toggle
+        // Add individual package rows inside the expander
+        for package in &bundle.packages {
+            let pkg_row = adw::ActionRow::builder()
+                .title(package)
+                .build();
+
+            let check = gtk::CheckButton::builder()
+                .valign(gtk::Align::Center)
+                .build();
+
+            // Store reference
+            imp.package_checks.borrow_mut().insert(
+                (bundle.id.clone(), package.clone()),
+                check.clone(),
+            );
+
+            // Connect package toggle
+            let bundle_id = bundle.id.clone();
+            let package_name = package.clone();
+            check.connect_toggled(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |check| {
+                    page.toggle_package(&bundle_id, &package_name, check.is_active());
+                }
+            ));
+
+            pkg_row.add_suffix(&check);
+            pkg_row.set_activatable_widget(Some(&check));
+            row.add_row(&pkg_row);
+        }
+
+        // Connect bundle enable switch
         let bundle_id = bundle.id.clone();
         let packages = bundle.packages.clone();
+        row.connect_enable_expansion_notify(glib::clone!(
+            #[weak(rename_to = page)]
+            self,
+            move |expander| {
+                let enabled = expander.enables_expansion();
+                page.toggle_bundle(&bundle_id, enabled, &packages);
+            }
+        ));
 
-        switch.connect_state_set(glib::clone!(@weak self as page => @default-return glib::Propagation::Proceed, move |_, state| {
-            page.toggle_bundle(&bundle_id, state, &packages);
-            glib::Propagation::Proceed
-        }));
-
-        (row, switch)
+        row
     }
 
     fn toggle_bundle(&self, bundle_id: &str, enabled: bool, packages: &[String]) {
         let imp = self.imp();
 
+        // Update all package checkboxes in this bundle
+        for package in packages {
+            let key = (bundle_id.to_string(), package.clone());
+            if let Some(check) = imp.package_checks.borrow().get(&key) {
+                check.set_active(enabled);
+            }
+        }
+
         // Update internal state
         if enabled {
-            imp.enabled_bundles.borrow_mut().insert(bundle_id.to_string());
+            let pkg_set: HashSet<String> = packages.iter().cloned().collect();
+            imp.enabled_packages.borrow_mut().insert(bundle_id.to_string(), pkg_set);
         } else {
-            imp.enabled_bundles.borrow_mut().remove(bundle_id);
+            imp.enabled_packages.borrow_mut().remove(bundle_id);
         }
 
         // Update main window state
@@ -204,6 +273,8 @@ impl BundlesPage {
             });
         }
 
+        self.update_summary();
+
         tracing::info!(
             "Bundle {} {} (packages: {})",
             bundle_id,
@@ -212,8 +283,83 @@ impl BundlesPage {
         );
     }
 
+    fn toggle_package(&self, bundle_id: &str, package: &str, enabled: bool) {
+        let imp = self.imp();
+
+        // Update internal state
+        let mut enabled_packages = imp.enabled_packages.borrow_mut();
+        let bundle_packages = enabled_packages
+            .entry(bundle_id.to_string())
+            .or_insert_with(HashSet::new);
+
+        if enabled {
+            bundle_packages.insert(package.to_string());
+        } else {
+            bundle_packages.remove(package);
+        }
+
+        drop(enabled_packages);
+        self.update_summary();
+
+        tracing::info!(
+            "Package {} in bundle {} {}",
+            package,
+            bundle_id,
+            if enabled { "enabled" } else { "disabled" }
+        );
+    }
+
+    fn update_summary(&self) {
+        let imp = self.imp();
+
+        // Collect all enabled packages
+        let enabled_packages = imp.enabled_packages.borrow();
+        let mut all_packages: Vec<String> = enabled_packages
+            .values()
+            .flat_map(|set| set.iter().cloned())
+            .collect();
+        all_packages.sort();
+        all_packages.dedup();
+
+        // Update summary label
+        if let Some(ref label) = *imp.summary_label.borrow() {
+            if all_packages.is_empty() {
+                label.set_label("No packages selected");
+            } else {
+                label.set_label(&all_packages.join(", "));
+            }
+        }
+    }
+
+    /// Get all enabled packages across all bundles
+    pub fn get_enabled_packages(&self) -> HashSet<String> {
+        let imp = self.imp();
+        imp.enabled_packages
+            .borrow()
+            .values()
+            .flat_map(|set| set.iter().cloned())
+            .collect()
+    }
+
+    /// Get enabled bundles (bundles with at least one package enabled)
     pub fn get_enabled_bundles(&self) -> HashSet<String> {
-        self.imp().enabled_bundles.borrow().clone()
+        let imp = self.imp();
+        imp.enabled_packages
+            .borrow()
+            .iter()
+            .filter(|(_, packages)| !packages.is_empty())
+            .map(|(bundle_id, _)| bundle_id.clone())
+            .collect()
+    }
+
+    /// Get enabled packages for a specific bundle
+    pub fn get_bundle_packages(&self, bundle_id: &str) -> HashSet<String> {
+        let imp = self.imp();
+        imp.enabled_packages
+            .borrow()
+            .get(bundle_id)
+            .cloned()
+            .unwrap_or_default()
     }
 }
 
