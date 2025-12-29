@@ -2,6 +2,32 @@
 
 A GTK4/libadwaita GUI application for declarative NixOS system management.
 
+## Quick Start
+
+1. **Install**: `nix run github:devjonesafrica/NixOSApp`
+2. **Setup**: Create the toolkit directory and placeholder file ([see One-Time Setup](#one-time-setup))
+3. **Integrate**: Add the import to your `configuration.nix`
+4. **Rebuild**: `sudo nixos-rebuild switch`
+
+> **Having issues?** See [Troubleshooting](#troubleshooting) for common errors like "path does not exist" or "syntax error".
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [One-Time Setup](#one-time-setup)
+- [Troubleshooting](#troubleshooting)
+- [Features](#features)
+- [Development](#development)
+- [Architecture](#architecture)
+- [Security Model](#security-model)
+- [Known Issues](#known-issues)
+- [Roadmap](#roadmap)
+
+---
+
 ## Features
 
 ### Desktop Environment Profiles
@@ -168,11 +194,43 @@ programs.nixos-toolkit.enable = true;
 
 ## One-Time Setup
 
-The toolkit manages configuration in `/etc/nixos/nixos-toolkit/`. You need to add a single import to your existing configuration:
+The toolkit manages configuration in `/etc/nixos/nixos-toolkit/`. To integrate with your system, you need to:
+
+1. Create the toolkit directory structure
+2. Create a placeholder configuration file
+3. Add an import to your NixOS configuration
+
+### Why These Steps Are Needed
+
+NixOS evaluates all imports when you run `nixos-rebuild`. If you add an import to a file that doesn't exist yet, the build will fail with:
+
+```
+error: path '/etc/nixos/nixos-toolkit/state/selected.nix' does not exist
+```
+
+The placeholder file we create is a valid (but empty) NixOS module. This allows `nixos-rebuild` to succeed immediately after setup. When you later use the toolkit to select profiles and bundles, the app will overwrite this placeholder with your actual configuration.
 
 ### Classic Configuration (configuration.nix)
 
-Add this import to your `/etc/nixos/configuration.nix`:
+**Step 1: Create the directory structure**
+
+```bash
+sudo mkdir -p /etc/nixos/nixos-toolkit/state
+```
+
+**Step 2: Create a placeholder file**
+
+```bash
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+# NixOS Toolkit - Placeholder
+# This file will be replaced when you apply changes in the toolkit
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+```
+
+**Step 3: Add the import to your configuration**
+
+Edit `/etc/nixos/configuration.nix` and add the import **inside** the `imports` list:
 
 ```nix
 { config, pkgs, ... }:
@@ -180,27 +238,144 @@ Add this import to your `/etc/nixos/configuration.nix`:
 {
   imports = [
     ./hardware-configuration.nix
-    ./nixos-toolkit/state/selected.nix  # Add this line
+    ./nixos-toolkit/state/selected.nix  # <-- Add this line
   ];
 
   # ... rest of your configuration
 }
 ```
 
+> **Important**: The import path must be inside the `imports = [ ... ];` brackets, not as a standalone line.
+
+**Step 4: Apply the changes**
+
+```bash
+sudo nixos-rebuild switch
+```
+
 ### Flake-Based Configuration
 
-Add this to your `flake.nix` nixosConfigurations:
+**Step 1: Create the directory structure**
+
+```bash
+sudo mkdir -p /etc/nixos/nixos-toolkit/state
+```
+
+**Step 2: Create a placeholder file**
+
+```bash
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+# NixOS Toolkit - Placeholder
+# This file will be replaced when you apply changes in the toolkit
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+```
+
+**Step 3: Add the import to your flake**
+
+Edit your `flake.nix` and add the import to your `modules` list:
 
 ```nix
 nixosConfigurations.your-hostname = nixpkgs.lib.nixosSystem {
   modules = [
     ./configuration.nix
-    ./nixos-toolkit/state/selected.nix  # Add this line
+    ./nixos-toolkit/state/selected.nix  # <-- Add this line
   ];
 };
 ```
 
-After adding the import, run `sudo nixos-rebuild switch` once. The toolkit will detect the integration and enable the Apply button.
+**Step 4: Apply the changes**
+
+```bash
+sudo nixos-rebuild switch --flake .#
+```
+
+### Quick Setup Script
+
+For convenience, you can run all setup steps with this one-liner:
+
+```bash
+sudo mkdir -p /etc/nixos/nixos-toolkit/state && \
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+```
+
+Then manually add the import line to your configuration and rebuild.
+
+### Verifying Integration
+
+After setup, launch the toolkit. The "Getting Started" page will show:
+- **"Integrated"** if the toolkit detected the import in your configuration
+- **"Not integrated"** if the import is missing or the file doesn't exist
+
+The toolkit will also show a status banner at the top of the window indicating integration status.
+
+## Troubleshooting
+
+### "path does not exist" error during nixos-rebuild
+
+```
+error: path '/etc/nixos/nixos-toolkit/state/selected.nix' does not exist
+```
+
+**Cause**: You added the import to your configuration before creating the placeholder file.
+
+**Solution**: Run the setup commands to create the directory and placeholder:
+
+```bash
+sudo mkdir -p /etc/nixos/nixos-toolkit/state
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+sudo nixos-rebuild switch
+```
+
+### "syntax error, unexpected PATH, expecting INHERIT"
+
+```
+error: syntax error, unexpected PATH, expecting INHERIT
+at /etc/nixos/configuration.nix:15:1
+```
+
+**Cause**: The import path was placed outside the `imports` list, as a standalone line.
+
+**Wrong** (import outside the list):
+```nix
+  imports = [
+    ./hardware-configuration.nix
+  ];
+
+./nixos-toolkit/state/selected.nix   # Wrong! This is outside the list
+```
+
+**Correct** (import inside the list):
+```nix
+  imports = [
+    ./hardware-configuration.nix
+    ./nixos-toolkit/state/selected.nix  # Correct! Inside the brackets
+  ];
+```
+
+### Toolkit shows "Not integrated" after setup
+
+**Possible causes**:
+1. The import line wasn't added to your configuration
+2. The `selected.nix` file doesn't exist
+3. You haven't run `nixos-rebuild switch` after adding the import
+
+**Solution**:
+1. Verify the file exists: `ls -la /etc/nixos/nixos-toolkit/state/selected.nix`
+2. Verify the import is in your config: `grep -r "nixos-toolkit" /etc/nixos/`
+3. Run `sudo nixos-rebuild switch` and restart the toolkit
+
+### Permission denied when creating files
+
+**Cause**: The `/etc/nixos/` directory requires root privileges.
+
+**Solution**: Use `sudo` for all setup commands, or run the toolkit's helper which uses `pkexec` for privilege escalation.
+
+---
 
 ## Development
 

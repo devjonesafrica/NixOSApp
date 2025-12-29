@@ -131,24 +131,44 @@ fn get_current_desktop() -> Option<String> {
 
 /// Generate integration snippet for classic configuration
 pub fn classic_integration_snippet() -> String {
-    r#"# Add the highlighted line to your imports list in /etc/nixos/configuration.nix:
+    r#"# Step 1: Create the toolkit directory (run once):
+sudo mkdir -p /etc/nixos/nixos-toolkit/state
 
+# Step 2: Create a placeholder file (run once):
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+
+# Step 3: Add this import to /etc/nixos/configuration.nix:
   imports =
     [
       ./hardware-configuration.nix
       ./nixos-toolkit/state/selected.nix  # <-- Add this line
-    ];"#
+    ];
+
+# Step 4: Rebuild your system:
+sudo nixos-rebuild switch"#
     .to_string()
 }
 
 /// Generate integration snippet for flake configuration
 pub fn flake_integration_snippet() -> String {
-    r#"# Add the highlighted line to your modules list in /etc/nixos/flake.nix:
+    r#"# Step 1: Create the toolkit directory (run once):
+sudo mkdir -p /etc/nixos/nixos-toolkit/state
 
+# Step 2: Create a placeholder file (run once):
+sudo tee /etc/nixos/nixos-toolkit/state/selected.nix > /dev/null << 'EOF'
+{ config, lib, pkgs, ... }: { imports = []; }
+EOF
+
+# Step 3: Add this import to your modules list in /etc/nixos/flake.nix:
   modules = [
     ./configuration.nix
     ./nixos-toolkit/state/selected.nix  # <-- Add this line
-  ];"#
+  ];
+
+# Step 4: Rebuild your system:
+sudo nixos-rebuild switch --flake .#"#
     .to_string()
 }
 

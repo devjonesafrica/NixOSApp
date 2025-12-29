@@ -65,7 +65,7 @@ impl OnboardingPage {
 
         // Description
         let desc = gtk::Label::builder()
-            .label("This tool helps you manage your NixOS configuration declaratively.\nTo get started, you need to add a one-time import to your configuration.")
+            .label("This tool helps you manage your NixOS configuration declaratively.\nFollow the steps below to complete the one-time setup.")
             .wrap(true)
             .halign(gtk::Align::Start)
             .css_classes(["dim-label"])
@@ -90,12 +90,12 @@ impl OnboardingPage {
         // Integration instructions
         let instructions_group = adw::PreferencesGroup::builder()
             .title("One-Time Setup")
-            .description("Add this import to your NixOS configuration to enable the toolkit")
+            .description("Follow these steps to integrate the toolkit with your NixOS configuration")
             .build();
 
         // Code snippet view
         let snippet_scroll = gtk::ScrolledWindow::builder()
-            .height_request(180)
+            .height_request(320)
             .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
