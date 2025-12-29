@@ -131,17 +131,24 @@ fn get_current_desktop() -> Option<String> {
 
 /// Generate integration snippet for classic configuration
 pub fn classic_integration_snippet() -> String {
-    r#"# Add this line to your imports list in /etc/nixos/configuration.nix:
+    r#"# Add the highlighted line to your imports list in /etc/nixos/configuration.nix:
 
-./nixos-toolkit/state/selected.nix"#
+  imports =
+    [
+      ./hardware-configuration.nix
+      ./nixos-toolkit/state/selected.nix  # <-- Add this line
+    ];"#
     .to_string()
 }
 
 /// Generate integration snippet for flake configuration
 pub fn flake_integration_snippet() -> String {
-    r#"# Add this line to your modules list in /etc/nixos/flake.nix:
+    r#"# Add the highlighted line to your modules list in /etc/nixos/flake.nix:
 
-./nixos-toolkit/state/selected.nix"#
+  modules = [
+    ./configuration.nix
+    ./nixos-toolkit/state/selected.nix  # <-- Add this line
+  ];"#
     .to_string()
 }
 
