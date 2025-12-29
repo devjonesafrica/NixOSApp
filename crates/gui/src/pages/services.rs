@@ -156,6 +156,38 @@ impl ServicesPage {
 
         content.append(&network_group);
 
+        // === Remote Access Services ===
+        let remote_group = adw::PreferencesGroup::builder()
+            .title("Remote Access")
+            .description("Remote desktop and access services")
+            .build();
+
+        let remote_services = [
+            ServiceDef {
+                id: "rustdesk",
+                name: "RustDesk",
+                description: "Open-source remote desktop (like TeamViewer/AnyDesk)",
+                icon: "computer-symbolic",
+                nix_option: "services.rustdesk-server.enable",
+            },
+        ];
+
+        for service in &remote_services {
+            let row = self.create_service_row(service);
+            remote_group.add(&row);
+            imp.service_switches.borrow_mut().insert(service.id.to_string(), row);
+        }
+
+        // RustDesk info
+        let rustdesk_info = adw::ActionRow::builder()
+            .title("RustDesk Client")
+            .subtitle("Install rustdesk package for the client app")
+            .build();
+        rustdesk_info.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+        remote_group.add(&rustdesk_info);
+
+        content.append(&remote_group);
+
         // === Sync & Backup Services ===
         let sync_group = adw::PreferencesGroup::builder()
             .title("Sync & Backup")
@@ -369,6 +401,7 @@ impl ServicesPage {
             upower: switches.get("upower").map(|s| s.is_active()).unwrap_or(false),
             networkmanager: switches.get("networkmanager").map(|s| s.is_active()).unwrap_or(false),
             resolved: switches.get("resolved").map(|s| s.is_active()).unwrap_or(false),
+            rustdesk: switches.get("rustdesk").map(|s| s.is_active()).unwrap_or(false),
             syncthing: switches.get("syncthing").map(|s| s.is_active()).unwrap_or(false),
             locate: switches.get("locate").map(|s| s.is_active()).unwrap_or(false),
             flatpak: switches.get("flatpak").map(|s| s.is_active()).unwrap_or(false),
@@ -410,6 +443,7 @@ pub struct ServicesConfig {
     pub upower: bool,
     pub networkmanager: bool,
     pub resolved: bool,
+    pub rustdesk: bool,
     pub syncthing: bool,
     pub locate: bool,
     pub flatpak: bool,
