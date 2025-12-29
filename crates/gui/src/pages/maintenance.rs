@@ -124,6 +124,7 @@ impl MaintenancePage {
 
         let log_scroll = gtk::ScrolledWindow::builder()
             .height_request(200)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let log_view = gtk::TextView::builder()

@@ -81,6 +81,7 @@ impl ApplyPage {
 
         let preview_scroll = gtk::ScrolledWindow::builder()
             .height_request(250)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let preview_view = gtk::TextView::builder()
@@ -148,6 +149,7 @@ impl ApplyPage {
 
         let log_scroll = gtk::ScrolledWindow::builder()
             .height_request(200)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let log_view = gtk::TextView::builder()

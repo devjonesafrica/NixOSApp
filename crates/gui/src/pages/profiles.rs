@@ -96,6 +96,7 @@ impl ProfilesPage {
 
         let preview_scroll = gtk::ScrolledWindow::builder()
             .height_request(200)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
             .build();
 
         let preview_view = gtk::TextView::builder()
